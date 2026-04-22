@@ -3,39 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN SMART MARINER | V10</title>
+    <title>ZAN SMART MARINER V10</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        :root { --neon: #00f2ff; --glass: rgba(6, 18, 30, 0.9); --danger: #ff003c; }
+        :root { --blue: #00f2ff; --glass: rgba(6, 18, 30, 0.9); }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Cairo', sans-serif; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
 
         /* واجهة الـ HUD */
-        .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 12px; box-sizing: border-box; }
-        
-        /* شريط البيانات العلوي */
-        .top-nav { pointer-events: auto; background: var(--glass); border: 1px solid var(--neon); border-radius: 12px; display: grid; grid-template-columns: repeat(4, 1fr); padding: 10px; backdrop-filter: blur(10px); }
-        .stat-box { text-align: center; border-left: 1px solid rgba(0, 242, 255, 0.2); }
-        .stat-box:last-child { border-left: none; }
-        .stat-val { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #fff; display: block; }
-        .stat-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
+        .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 15px; box-sizing: border-box; }
+        .top-dash { pointer-events: auto; background: var(--glass); border: 1px solid var(--blue); border-radius: 12px; display: grid; grid-template-columns: repeat(4, 1fr); padding: 12px; backdrop-filter: blur(10px); }
+        .stat { text-align: center; border-left: 1px solid rgba(0, 242, 255, 0.1); }
+        .stat:last-child { border-left: none; }
+        .stat-v { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #fff; }
+        .stat-l { font-size: 10px; color: var(--blue); font-weight: bold; }
 
-        /* مراقب المحرك الجانبي */
-        .engine-monitor { pointer-events: auto; width: 130px; background: var(--glass); border-radius: 10px; padding: 10px; border-right: 3px solid #0cf32b; margin-top: 10px; }
-        .m-row { font-size: 10px; color: #eee; margin-bottom: 5px; }
-        .m-bar { height: 4px; background: #111; border-radius: 2px; margin-top: 3px; overflow: hidden; }
-        .m-fill { height: 100%; background: #0cf32b; width: 75%; }
-
-        /* زر SOS */
-        .sos-btn { pointer-events: auto; width: 65px; height: 65px; background: radial-gradient(var(--danger), #80001e); border: 2px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; position: absolute; bottom: 90px; right: 20px; box-shadow: 0 0 20px rgba(255,0,0,0.5); animation: pulse 2s infinite; text-decoration: none; }
+        .sos { pointer-events: auto; width: 70px; height: 70px; background: red; border: 3px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; position: absolute; bottom: 100px; right: 20px; box-shadow: 0 0 20px red; animation: pulse 2s infinite; text-decoration: none; }
         @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
 
-        /* الشريط السفلي */
-        .bottom-bar { pointer-events: auto; background: var(--glass); border-top: 2px solid var(--neon); display: flex; justify-content: space-around; padding: 12px 0; border-radius: 20px 20px 0 0; }
-        .nav-item { color: #fff; text-align: center; font-size: 11px; opacity: 0.8; }
+        .bottom-nav { pointer-events: auto; background: var(--glass); border-top: 2px solid var(--blue); display: flex; justify-content: space-around; padding: 15px; border-radius: 25px 25px 0 0; }
+        .nav-link { color: #fff; text-align: center; font-size: 11px; opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -43,57 +33,40 @@
     <div id="map"></div>
 
     <div class="hud">
-        <div class="top-nav">
-            <div class="stat-box"><span class="stat-lbl">السرعة</span><span class="stat-val" id="speed">0.0</span></div>
-            <div class="stat-box"><span class="stat-lbl">الاتجاه</span><span class="stat-val" id="cog">360°</span></div>
-            <div class="stat-box"><span class="stat-lbl">العمق</span><span class="stat-val">15.4m</span></div>
-            <div class="stat-box"><span class="stat-lbl">الرياح</span><span class="stat-val">12knt</span></div>
+        <div class="top-dash">
+            <div class="stat"><span class="stat-l">SOG</span><span class="stat-v" id="speed">0.0</span></div>
+            <div class="stat"><span class="stat-l">COG</span><span class="stat-v">360°</span></div>
+            <div class="stat"><span class="stat-l">DEPTH</span><span class="stat-v">18.2m</span></div>
+            <div class="stat"><span class="stat-l">WIND</span><span class="stat-v">14knt</span></div>
         </div>
 
-        <div class="engine-monitor">
-            <div class="m-row">حرارة المحرك<div class="m-bar"><div class="m-fill"></div></div></div>
-            <div class="m-row">ضغط الزيت<div class="m-bar"><div class="m-fill" style="width:85%"></div></div></div>
-            <div class="m-row">البطارية<div class="m-bar"><div class="m-fill" style="width:90%"></div></div></div>
-        </div>
+        <a href="tel:994" class="sos">SOS</a>
 
-        <a href="tel:994" class="sos-btn">SOS</a>
-
-        <div class="bottom-bar">
-            <div class="nav-item">🧭<br>رادار</div>
-            <div class="nav-item">🌦️<br>طقس</div>
-            <div class="nav-item" style="color:var(--neon)">⚓<br>خرائط</div>
-            <div class="nav-item">🛠️<br>صيانة</div>
+        <div class="bottom-nav">
+            <div class="nav-link">🧭<br>رادار</div>
+            <div class="nav-link">🌦️<br>طقس</div>
+            <div class="nav-link" style="color:var(--blue)">⚓<br>خرائط</div>
+            <div class="nav-link">🛠️<br>صيانة</div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة
+        // إعداد الخريطة باستخدام روابط Esri الموثوقة
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
 
-        // طبقة ESRI Ocean المعتمدة في صورك
+        // طبقة الأساس: المحيطات
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-        // طبقة OpenSeaMap الملاحية
+        // طبقة التفاصيل الملاحية
         L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
 
-        // تحديد الموقع
         map.locate({setView: true, watch: true, enableHighAccuracy: true});
-        
-        map.on('locationfound', function(e) {
-            if (!window.userM) {
-                window.userM = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 8, fillOpacity: 0.9}).addTo(map);
-            } else {
-                window.userM.setLatLng(e.latlng);
-            }
+        map.on('locationfound', (e) => {
+            if (!window.m) window.m = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10}).addTo(map);
+            else window.m.setLatLng(e.latlng);
             document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
         });
-
-        // رسالة ترحيبية صوتية عند التشغيل
-        window.onload = () => {
-            const msg = new SpeechSynthesisUtterance("System V10 Online. Welcome Captain Ahmad.");
-            window.speechSynthesis.speak(msg);
-        };
     </script>
 </body>
 </html>
