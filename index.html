@@ -3,119 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Mariner | البحّار الذكي</title>
+    <title>ZAN SMART MARINER | النسخة القبطان V10</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        :root { --neon-blue: #00f2ff; --neon-green: #0cf32b; --glass: rgba(10, 25, 41, 0.9); }
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-green: #0cf32b;
+            --danger-red: #ff003c;
+            --glass: rgba(6, 18, 30, 0.9);
+        }
+
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Cairo', sans-serif; background: #000; overflow: hidden; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
 
-        /* HUD - واجهة المستخدم المتجاوبة */
-        .hud-container {
+        /* واجهة الـ HUD المتكاملة */
+        .hud-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 10;
             display: flex; flex-direction: column; justify-content: space-between;
-            padding: 10px; box-sizing: border-box;
+            padding: 12px; box-sizing: border-box;
         }
 
-        /* شريط المعلومات العلوي (مستوحى من Marine Compass) */
-        .top-info-bar {
+        /* 1. الشريط العلوي: بيانات الحركة (مستوحى من Marine Compass) */
+        .top-dash {
             pointer-events: auto; background: var(--glass);
             border: 1px solid var(--neon-blue); border-radius: 15px;
             display: grid; grid-template-columns: repeat(4, 1fr);
-            padding: 10px; backdrop-filter: blur(8px);
+            padding: 12px; backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
         }
-        .info-box { text-align: center; border-left: 1px solid rgba(0,242,255,0.2); }
-        .info-box:last-child { border-left: none; }
-        .label { display: block; font-size: 10px; color: var(--neon-blue); text-transform: uppercase; }
-        .value { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #fff; font-weight: bold; }
+        .data-box { text-align: center; border-left: 1px solid rgba(0, 242, 255, 0.1); }
+        .data-box:last-child { border-left: none; }
+        .data-label { display: block; font-size: 10px; color: var(--neon-blue); font-weight: bold; }
+        .data-value { font-family: 'Orbitron', sans-serif; font-size: 16px; color: #fff; }
 
-        /* لوحة الصيانة والطقس (وسط الشاشة) */
-        .side-stats {
-            pointer-events: auto; width: 130px; background: var(--glass);
+        /* 2. اللوحة الجانبية: مراقبة المحرك والأخطار */
+        .side-monitor {
+            pointer-events: auto; width: 140px; background: var(--glass);
             border-radius: 12px; padding: 10px; border-right: 3px solid var(--neon-green);
-            margin-top: 10px; align-self: flex-start;
+            margin-top: 15px; align-self: flex-start;
         }
-        .stat-row { margin-bottom: 8px; font-size: 12px; }
-        .progress-mini { height: 4px; background: #222; border-radius: 2px; margin-top: 4px; }
-        .fill { height: 100%; background: var(--neon-green); width: 80%; }
+        .monitor-row { margin-bottom: 10px; font-size: 11px; color: #eee; }
+        .bar-bg { height: 5px; background: #1a1a1a; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; background: var(--neon-green); width: 0%; transition: width 1s; }
 
-        /* زر الطوارئ SOS */
-        .sos-circle {
-            pointer-events: auto; width: 70px; height: 70px;
-            background: radial-gradient(#ff0000, #900);
+        /* 3. زر الطوارئ المركزي SOS */
+        .sos-trigger {
+            pointer-events: auto; width: 75px; height: 75px;
+            background: radial-gradient(#ff003c, #80001e);
             border: 3px solid #fff; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-weight: bold; color: #fff; position: absolute;
-            bottom: 90px; right: 20px; box-shadow: 0 0 20px rgba(255,0,0,0.5);
-            animation: pulse 2s infinite; text-decoration: none;
+            font-weight: bold; color: #fff; font-size: 18px;
+            position: absolute; bottom: 100px; left: 20px;
+            box-shadow: 0 0 25px rgba(255, 0, 60, 0.6);
+            animation: alert-pulse 2s infinite; text-decoration: none;
         }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes alert-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
 
-        /* الشريط السفلي (مستوحى من Mariner Suite) */
-        .bottom-nav {
+        /* 4. الشريط السفلي: التحكم (مستوحى من Mariner Suite) */
+        .bottom-control {
             pointer-events: auto; background: var(--glass);
             border-top: 2px solid var(--neon-blue);
             display: flex; justify-content: space-around;
-            padding: 15px 5px; border-radius: 20px 20px 0 0;
+            padding: 15px 5px; border-radius: 25px 25px 0 0;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
         }
-        .nav-item { color: #fff; text-align: center; font-size: 11px; opacity: 0.8; }
-        .nav-item i { display: block; font-size: 18px; margin-bottom: 3px; }
+        .control-item { color: #fff; text-align: center; font-size: 11px; flex: 1; cursor: pointer; }
+        .control-item i { display: block; font-size: 20px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
 
-    <div class="hud-container">
-        <div class="top-info-bar">
-            <div class="info-box"><span class="label">SOG</span><span class="value" id="speed">0.0</span></div>
-            <div class="info-box"><span class="label">COG</span><span class="value" id="heading">310°</span></div>
-            <div class="info-box"><span class="label">DEPTH</span><span class="value">12.4m</span></div>
-            <div class="info-box"><span class="label">WIND</span><span class="value">14knt</span></div>
+    <div class="hud-layer">
+        <div class="top-dash">
+            <div class="data-box"><span class="data-label">السرعة</span><span class="data-value" id="spd">0.0</span></div>
+            <div class="data-box"><span class="data-label">الاتجاه</span><span class="data-value" id="cog">360°</span></div>
+            <div class="data-box"><span class="data-label">العمق</span><span class="data-value">18.2m</span></div>
+            <div class="data-box"><span class="data-label">الرياح</span><span class="data-value">14knt</span></div>
         </div>
 
-        <div class="side-stats">
-            <div class="stat-row">حرارة المحرك<div class="progress-mini"><div class="fill"></div></div></div>
-            <div class="stat-row">ضغط الزيت<div class="progress-mini"><div class="fill" style="width:90%"></div></div></div>
-            <div class="stat-row">البطارية<div class="progress-mini"><div class="fill" style="width:95%"></div></div></div>
+        <div class="side-monitor">
+            <div class="monitor-row">حرارة المحرك<div class="bar-bg"><div class="bar-fill" style="width: 65%;"></div></div></div>
+            <div class="monitor-row">ضغط الزيت<div class="bar-bg"><div class="bar-fill" style="width: 82%;"></div></div></div>
+            <div class="monitor-row">البطارية<div class="bar-bg"><div class="bar-fill" style="width: 95%;"></div></div></div>
+            <div style="font-size: 10px; color: var(--danger-red); margin-top: 5px;">⚠️ لا يوجد أخطار قريبة</div>
         </div>
 
-        <a href="tel:994" class="sos-circle">SOS</a>
+        <a href="tel:994" class="sos-trigger">SOS</a>
 
-        <div class="bottom-nav">
-            <div class="nav-item">🧭<br>رادار</div>
-            <div class="nav-item">🌦️<br>طقس</div>
-            <div class="nav-item">🛠️<br>صيانة</div>
-            <div class="nav-item">⚓<br>خرائط</div>
+        <div class="bottom-control">
+            <div class="control-item">🧭<br>الرادار</div>
+            <div class="control-item">🌦️<br>الطقس</div>
+            <div class="control-item" style="color: var(--neon-blue);">⚓<br>الخرائط</div>
+            <div class="control-item">🛠️<br>الصيانة</div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة الملاحية (ESRI Ocean + OpenSeaMap)
-        const map = L.map('map', { zoomControl: false }).setView([21.45, 39.12], 12);
+        // إعداد الخريطة الملاحية المركزة (جدة)
+        const map = L.map('map', { 
+            zoomControl: false,
+            attributionControl: false 
+        }).setView([21.45, 39.12], 12);
 
-        // 1. طبقة الأعماق من ESRI
+        // طبقة 1: الخرائط الملاحية ESRI (أعماق وتضاريس القاع)
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-        // 2. طبقة أسماء الجزر والقطع الملاحية من OpenSeaMap
+        // طبقة 2: تفاصيل OpenSeaMap (أسماء الجزر، المنارات، القطع البحرية)
         L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
 
-        // تحديث الموقع الفعلي
+        // تفعيل الموقع الحي للجوال
         map.locate({setView: true, watch: true, enableHighAccuracy: true});
         
         map.on('locationfound', function(e) {
-            if (!window.userMarker) {
-                window.userMarker = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 8}).addTo(map);
+            if (!window.captainMarker) {
+                window.captainMarker = L.circleMarker(e.latlng, {
+                    color: '#00f2ff', fillOpacity: 0.8, radius: 10
+                }).addTo(map).bindPopup("أنت هنا يا كابتن أحمد");
             } else {
-                window.userMarker.setLatLng(e.latlng);
+                window.captainMarker.setLatLng(e.latlng);
             }
-            document.getElementById('speed').innerText = (e.speed || 0).toFixed(1);
+            // تحديث السرعة والاتجاه برمجياً
+            document.getElementById('spd').innerText = (e.speed * 1.94384 || 0).toFixed(1); // تحويل لميل بحري
+            if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
         });
+
+        // رسالة ترحيبية
+        window.onload = () => {
+            const speech = new SpeechSynthesisUtterance("Welcome Captain Ahmad. System V 10 is Online.");
+            window.speechSynthesis.speak(speech);
+        };
     </script>
 </body>
 </html>
