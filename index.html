@@ -1,111 +1,29 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN SMART MARINER | النسخة الاحترافية</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <style>
-        :root { --neon: #00f2ff; --glass: rgba(10, 25, 41, 0.9); }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; background: #000; overflow: hidden; }
+<script>
+    // دالة محاكاة الرادار الحي بناءً على موقعك الفعلي
+    function startLiveRadar() {
+        if (!userPos) {
+            alert("يرجى تفعيل الـ GPS أولاً للبدء بمسح المنطقة");
+            return;
+        }
 
-        /* كاميرا الواقع المعزز خلف الخريطة */
-        #ar-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; opacity: 0.6; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; }
-
-        .hud-top { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--glass); display: flex; padding: 10px 0; border-bottom: 2px solid var(--neon); }
-        .stat { flex: 1; text-align: center; color: white; }
-        .val { display: block; font-size: 1.2rem; font-weight: bold; }
-        .lbl { font-size: 0.7rem; color: var(--neon); }
-
-        /* أزرار التحكم */
-        .controls { position: absolute; right: 15px; top: 80px; z-index: 10; display: flex; flex-direction: column; gap: 15px; }
-        .btn { width: 55px; height: 55px; background: var(--glass); border: 1.5px solid var(--neon); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; pointer-events: auto; }
-
-        /* زر SOS المطور */
-        .sos-btn { position: absolute; bottom: 30px; left: 20px; width: 70px; height: 70px; background: red; border-radius: 50%; z-index: 100; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; animation: pulse 2s infinite; text-decoration: none; box-shadow: 0 0 20px red; }
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
-    </style>
-</head>
-<body>
-
-    <video id="ar-video" autoplay playsinline></video>
-    <div id="map"></div>
-
-    <div class="hud-top">
-        <div class="stat"><span class="lbl">SOG (عقدة)</span><span class="val" id="spd">0.0</span></div>
-        <div class="stat"><span class="lbl">COG (درجة)</span><span class="val" id="cog">--</span></div>
-        <div class="stat"><span class="lbl">إحداثياتك</span><span class="val" id="coords" style="font-size: 10px;">بانتظار GPS</span></div>
-    </div>
-
-    <div class="controls">
-        <div class="btn" onclick="toggleAR()" title="الواقع المعزز">👓</div>
-        <div class="btn" onclick="toggleRadar()" title="الرادار">📡</div>
-        <div class="btn" onclick="map.locate({setView: true})">🧭</div>
-    </div>
-
-    <div class="sos-btn" onclick="sendSOS()">SOS</div>
-
-    <script>
-        // تفعيل الخريطة مع طبقة الأعماق (OpenSeaMap)
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 13);
+        alert("بدء مسح الرادار AIS للمنطقة المحيطة...");
         
-        // طبقة القمر الصناعي
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-        // طبقة الأعماق والعلامات الملاحية
-        const seaMarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png');
-        
-        satellite.addTo(map);
-        seaMarks.addTo(map);
+        // محاكاة جلب بيانات السفن الحقيقية حول موقعك
+        const mockShips = [
+            { name: "NA ناقلة نفط", lat: userPos.lat + 0.005, lng: userPos.lng + 0.003, speed: "12 عقدة" },
+            { name: "YACHT 777", lat: userPos.lat - 0.008, lng: userPos.lng - 0.005, speed: "22 عقدة" }
+        ];
 
-        let userLoc = null;
-
-        // تفعيل الرادار و AIS
-        function toggleRadar() {
-            alert("جاري سحس بيانات AIS للسفن المحيطة بموقعك...");
-            // هنا يتم إضافة الأيقونات الحمراء للسفن
-        }
-
-        // تشغيل الواقع المعزز (الكاميرا)
-        async function toggleAR() {
-            const video = document.getElementById('ar-video');
-            if (video.style.display === 'none' || video.style.display === '') {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                    video.srcObject = stream;
-                    video.style.display = 'block';
-                    document.getElementById('map').style.opacity = '0.5';
-                } catch (e) { alert("تأكد من إعطاء إذن الكاميرا وتشغيل HTTPS"); }
-            } else {
-                video.style.display = 'none';
-                document.getElementById('map').style.opacity = '1';
-            }
-        }
-
-        // نظام الاستغاثة (الإحداثيات + SMS)
-        function sendSOS() {
-            if (!userLoc) { alert("لا توجد إحداثيات حالياً!"); return; }
-            const lat = userLoc.lat.toFixed(5);
-            const lng = userLoc.lng.toFixed(5);
-            const phone = prompt("أدخل رقم الجوال المؤقت لإرسال الاستغاثة (مثال: 05xxxxxxx):");
-            if (phone) {
-                const msg = `استغاثة طارئة! موقعي: https://www.google.com/maps?q=${lat},${lng}`;
-                window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
-            }
-        }
-
-        map.on('locationfound', (e) => {
-            userLoc = e.latlng;
-            if (!window.ship) window.ship = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1}).addTo(map);
-            else window.ship.setLatLng(e.latlng);
-            document.getElementById('coords').innerText = `${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}`;
-            document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+        mockShips.forEach(ship => {
+            const shipMarker = L.marker([ship.lat, ship.lng], {
+                icon: L.divIcon({
+                    className: 'radar-ship',
+                    html: `<div style="background:red; width:10px; height:10px; border-radius:50%; box-shadow:0 0 10px red;"></div>
+                           <span style="color:white; font-size:10px; white-space:nowrap;">${ship.name}</span>`
+                })
+            }).addTo(aisLayer);
+            
+            shipMarker.bindPopup(`<b>سفينة مكتشفة</b><br>السرعة: ${ship.speed}`);
         });
-
-        map.locate({watch: true, enableHighAccuracy: true});
-    </script>
-</body>
-</html>
+    }
+</script>
