@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINER ULTIMATE V33</title>
+    <title>ZAN MARINE IRONCLAD V35</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #000b14; }
+        :root { --neon: #00f2ff; --bg: #000; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: var(--bg); }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: #001529; }
         
-        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.95); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(10px); }
+        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(10px); }
         .data-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
         .v-data { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
         .v-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
 
         .btn-stack { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
-        .m-btn { width: 55px; height: 55px; background: rgba(0, 11, 20, 0.9); border: 2px solid var(--neon); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .m-btn { width: 55px; height: 55px; background: rgba(0, 11, 20, 0.9); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body>
@@ -24,33 +24,42 @@
     <div id="map"></div>
 
     <div class="nav-hud">
-        <div class="data-item"><span class="v-lbl">SOG السرعة</span><span class="v-data" id="spd">0.1</span></div>
+        <div class="data-item"><span class="v-lbl">SOG السرعة</span><span class="v-data" id="spd">0.0</span></div>
         <div class="data-item"><span class="v-lbl">COG الاتجاه</span><span class="v-data" id="cog">--</span></div>
         <div class="data-item"><span class="v-lbl">GPS الإحداثيات</span><span class="v-data" id="pos" style="font-size: 10px;">...</span></div>
     </div>
 
     <div class="btn-stack">
         <div class="m-btn" onclick="map.locate({setView: true})">🧭</div>
-        <div class="m-btn" onclick="toggleSatellite()">🌍</div>
         <div class="m-btn" onclick="location.reload()">🔄</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة بأعلى مستويات التكبير المتاحة
+        // إعداد الخريطة بأقصى زووم ممكن عالمياً (22) لمنع أي انقطاع
         const map = L.map('map', { 
             zoomControl: false, 
             attributionControl: false,
-            maxZoom: 18 // الحد الأقصى لدقة البيانات الملاحية
-        }).setView([21.45, 39.12], 12);
+            maxZoom: 22 
+        }).setView([21.45, 39.12], 13);
         
-        // 1. خريطة الأعماق والتضاريس (World Ocean Base) - لا تختفي عند التكبير
-        const oceanBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
+        // الطبقة 1: الأقمار الصناعية (الأساس المتين الذي لا يختفي)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 22
+        }).addTo(map);
         
-        // 2. طبقة المسميات الملاحية التفصيلية (جزر، شعاب، ممرات)
-        const oceanRef = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}').addTo(map);
+        // الطبقة 2: الشفافية الملاحية (الأعماق والأسماء والحدود البحرية)
+        // هذه الطبقة ستظهر فوق القمر الصناعي لتعطيك البيانات دون حجب الصورة
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 20,
+            opacity: 0.8 // توازن بين رؤية القاع ورؤية الأسماء
+        }).addTo(map);
 
-        // تتبع الموقع والسرعة بشكل حي
+        // الطبقة 3: العلامات الملاحية (بوويات، منارات، شعاب)
+        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+            maxZoom: 18
+        }).addTo(map);
+
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
             document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
@@ -58,21 +67,11 @@
             document.getElementById('pos').innerText = e.lat.toFixed(4) + "," + e.lng.toFixed(4);
             
             if (!window.boat) {
-                window.boat = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1, weight: 3}).addTo(map);
+                window.boat = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1, weight: 4, stroke: true}).addTo(map);
             } else {
                 window.boat.setLatLng(e.latlng);
             }
         });
-
-        function toggleSatellite() {
-            if (map.hasLayer(oceanBase)) {
-                map.removeLayer(oceanBase);
-                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-                alert("تم التبديل لوضع القمر الصناعي");
-            } else {
-                location.reload();
-            }
-        }
     </script>
 </body>
 </html>
