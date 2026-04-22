@@ -1,36 +1,80 @@
-<script>
-    const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
-    
-    // 1. خريطة الأقمار الصناعية (الأساسية)
-    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-    
-    // 2. خريطة الأعماق والأسماء (OpenSeaMap) - تحتوي على أسماء الجزر والشعاب
-    const depthLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZAN MARINE - LIVE DATA</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --cyan: #00f2ff; --panel: rgba(0, 15, 30, 0.9); }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Arial', sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
+        
+        /* شاشة البيانات الملاحية */
+        .hud-bar { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--panel); display: flex; padding: 12px 0; border-bottom: 2px solid var(--cyan); backdrop-filter: blur(10px); }
+        .stat-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
+        .v-data { display: block; font-size: 1.5rem; font-weight: bold; color: #fff; text-shadow: 0 0 5px var(--cyan); }
+        .v-label { font-size: 10px; color: var(--cyan); font-weight: bold; }
 
-    // 3. طبقة تضاريس القاع (اختيارية للرؤية الطبوغرافية)
-    const oceanRelief = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}');
+        /* التحكم في الطبقات */
+        .nav-tools { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .t-btn { width: 55px; height: 55px; background: var(--panel); border: 2px solid var(--cyan); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+    </style>
+</head>
+<body>
 
-    // ميزة البحث عن الشعاب المرجانية المعروفة
-    const reefs = [
-        { name: "شعاب أبو مدفع", loc: [21.683, 38.966] },
-        { name: "شعاب المسماري", loc: [21.316, 39.016] },
-        { name: "جزيرة جبل الليث", loc: [20.250, 39.916] }
-    ];
+    <div id="map"></div>
 
-    reefs.forEach(reef => {
-        L.circle(reef.loc, {color: 'orange', radius: 500}).addTo(map).bindPopup(reef.name);
-    });
+    <div class="hud-bar">
+        <div class="stat-item"><span class="v-label">السرعة SOG</span><span class="v-data" id="speed">0.0</span></div>
+        <div class="stat-item"><span class="v-label">الاتجاه COG</span><span class="v-data" id="cog">--</span></div>
+        <div class="stat-item"><span class="v-label">العمق (متر)</span><span class="v-data" id="depth_val">--</span></div>
+    </div>
 
-    // تبديل بين رؤية الأقمار الصناعية وتضاريس القاع
-    function toggleSatellite() {
-        if (map.hasLayer(satellite)) {
-            map.removeLayer(satellite);
-            oceanRelief.addTo(map);
-            alert("تم التبديل لرؤية تضاريس القاع (Ocean Relief)");
-        } else {
-            map.removeLayer(oceanRelief);
-            satellite.addTo(map);
-            alert("تم التبديل لرؤية الأقمار الصناعية");
+    <div class="nav-tools">
+        <div class="t-btn" onclick="toggleMode()">🗺️</div>
+        <div class="t-btn" onclick="map.locate({setView: true})">🧭</div>
+        <div class="t-btn" onclick="location.reload()">🔄</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // إعداد الخريطة بتركيز ملاحي
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
+        
+        // 1. طبقة البيانات الطبوغرافية البحرية (خطوط الأعماق والأسماء المدمجة)
+        const marineData = L.tileLayer('https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=YOUR_API_KEY', {
+            // ملاحظة: يمكنك استخدام OpenTopoMap كبديل مجاني وبدون مفتاح:
+        });
+        
+        const openTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // 2. طبقة العلامات البحرية الحية (عوامات، شعاب، منارات)
+        const seaMarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
+
+        // تتبع الموقع والسرعة
+        map.locate({watch: true, enableHighAccuracy: true});
+        map.on('locationfound', (e) => {
+            document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
+            
+            if (!window.myBoat) {
+                window.myBoat = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1}).addTo(map);
+            } else {
+                window.myBoat.setLatLng(e.latlng);
+            }
+        });
+
+        // تبديل الأوضاع لرؤية تفاصيل الشعاب
+        function toggleMode() {
+            if (map.hasLayer(openTopo)) {
+                map.removeLayer(openTopo);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+                alert("وضع القمر الصناعي مع العلامات الملاحية");
+            } else {
+                location.reload();
+            }
         }
-    }
-</script>
+    </script>
+</body>
+</html>
