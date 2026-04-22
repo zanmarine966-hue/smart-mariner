@@ -1,53 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Mariner</title>
+    <title>ZAN TEST</title>
     <style>
-        /* Glassmorphism styling */
-        body {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            color: #fff;
-        }
-        .button {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            border-radius: 10px;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            color: white;
-            transition: background 0.3s;
-        }
-        .button:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
+        body { background: #000; color: #00f2ff; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+        .box { border: 2px solid #00f2ff; padding: 40px; text-align: center; box-shadow: 0 0 20px #00f2ff; }
     </style>
 </head>
 <body>
-    <div id="intro-screen">
-        <h1>Welcome to Smart Mariner</h1>
-        <button class="button" id="start-mission">Start Mission</button>
+    <div class="box">
+        <h1>ZAN SMART MARINER</h1>
+        <p>جاري تحميل الأنظمة الملاحية...</p>
+        <button onclick="location.reload()" style="background:#00f2ff; border:none; padding:10px 20px; cursor:pointer;">تحديث الصفحة</button>
     </div>
-    <script>
-        document.getElementById('start-mission').addEventListener('click', function() {
-            // Handle browser autoplay restrictions
-            map.locate();
-            // Trigger speech synthesis (example)
-            window.speechSynthesis.speak(new SpeechSynthesisUtterance('Starting the mission!'));
-            // Access camera for AR (using getUserMedia API)
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
-                    // Use the stream for AR
-                })
-                .catch(function(err) {
-                    console.error('Error accessing camera: ' + err);
-                });
-            // Hide intro screen
-            document.getElementById('intro-screen').style.display = 'none';
-        });
-    </script>
 </body>
 </html>
