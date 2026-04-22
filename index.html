@@ -3,109 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN SMART MARINER | V13</title>
+    <title>ZAN SMART MARINER | V14</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        :root { --neon: #00f2ff; --glass: rgba(6, 18, 30, 0.9); --danger: #ff003c; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Cairo', sans-serif; background: #000; overflow: hidden; color: white; }
+        :root { --neon: #00f2ff; --glass: rgba(6, 18, 30, 0.9); }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Cairo', sans-serif; background: #000; overflow: hidden; }
         
-        /* شاشة البداية السينمائية */
+        /* شاشة البداية التي تظهر في صورتك */
         #intro-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, #0a1929 0%, #000 100%);
             z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            transition: opacity 1.5s ease;
+            transition: opacity 1s ease;
         }
-        .zan-logo {
-            font-family: 'Orbitron', sans-serif; font-size: 5rem; font-weight: bold;
-            color: transparent; -webkit-text-stroke: 2px var(--neon);
-            text-shadow: 0 0 30px var(--neon); animation: glow 2s infinite alternate;
-        }
-        @keyframes glow { from { text-shadow: 0 0 10px var(--neon); } to { text-shadow: 0 0 40px var(--neon), 0 0 60px #005f6b; } }
+        .zan-logo { font-family: 'Orbitron', sans-serif; font-size: 4rem; color: var(--neon); text-shadow: 0 0 20px var(--neon); }
 
-        /* الخريطة والواقع المعزز */
-        #map { height: 100vh; width: 100vw; z-index: 1; }
-        #ar-view { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 5; display: none; background: #000;
-        }
-        video { width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
+        #map { height: 100vh; width: 100vw; z-index: 1; position: absolute; }
 
-        /* HUD الواجهة الزجاجية */
+        /* الواجهة الملاحية HUD */
         .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 15px; box-sizing: border-box; }
-        
-        .top-dash { 
-            pointer-events: auto; background: var(--glass); border: 1.5px solid var(--neon); 
-            border-radius: 15px; display: grid; grid-template-columns: repeat(4, 1fr); 
-            padding: 12px; backdrop-filter: blur(10px); box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
-        }
-        .stat-box { text-align: center; border-left: 1px solid rgba(0, 242, 255, 0.1); }
-        .stat-box:last-child { border-left: none; }
-        .val { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: #fff; display: block; }
-        .lbl { font-size: 0.6rem; color: var(--neon); font-weight: bold; }
+        .top-dash { pointer-events: auto; background: var(--glass); border: 1.5px solid var(--neon); border-radius: 12px; display: grid; grid-template-columns: repeat(4, 1fr); padding: 10px; backdrop-filter: blur(10px); }
+        .stat { text-align: center; border-left: 1px solid rgba(0, 242, 255, 0.1); }
+        .stat:last-child { border-left: none; }
+        .val { font-family: 'Orbitron', sans-serif; font-size: 14px; color: #fff; }
+        .lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
 
-        /* أزرار الطوارئ والاستغاثة */
-        .sos-btn { 
-            pointer-events: auto; width: 80px; height: 80px; background: radial-gradient(var(--danger), #80001e); 
-            border: 3px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-            font-weight: bold; color: #fff; position: absolute; bottom: 110px; right: 20px; 
-            box-shadow: 0 0 30px var(--danger); animation: pulse 1.5s infinite; text-decoration: none;
-        }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-
-        /* القائمة السفلية */
-        .bottom-nav { 
-            pointer-events: auto; background: var(--glass); border-top: 2.5px solid var(--neon); 
-            display: flex; justify-content: space-around; padding: 15px 5px; border-radius: 25px 25px 0 0; 
-        }
-        .nav-item { color: #fff; text-align: center; font-size: 11px; flex: 1; cursor: pointer; }
-        
-        /* تنبيه المخاطر */
-        #danger-alert {
-            position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
-            background: rgba(255, 0, 60, 0.8); padding: 5px 20px; border-radius: 20px;
-            display: none; color: white; font-weight: bold; border: 1px solid white;
-        }
+        .sos { pointer-events: auto; width: 70px; height: 70px; background: red; border: 2px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; position: absolute; bottom: 100px; right: 20px; box-shadow: 0 0 20px red; text-decoration: none; z-index: 20; }
+        .bottom-nav { pointer-events: auto; background: var(--glass); border-top: 2px solid var(--neon); display: flex; justify-content: space-around; padding: 12px 0; border-radius: 20px 20px 0 0; }
+        .nav-item { color: #fff; text-align: center; font-size: 10px; opacity: 0.9; }
     </style>
 </head>
 <body>
 
     <div id="intro-screen">
         <div class="zan-logo">ZAN</div>
-        <p style="color: var(--neon); letter-spacing: 5px; margin-top: 20px;">SMART MARINER</p>
-    </div>
-
-    <div id="ar-view">
-        <video id="ar-video" autoplay playsinline></video>
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 2px solid var(--neon); width: 200px; height: 200px; border-radius: 50%;"></div>
+        <p style="color: var(--neon); margin-top: 10px; letter-spacing: 3px;">SMART MARINER</p>
     </div>
 
     <div id="map"></div>
 
     <div class="hud">
-        <div id="danger-alert">⚠️ تحذير: منطقة شعاب مرجانية قريبة</div>
-        
         <div class="top-dash">
-            <div class="stat-box"><span class="lbl">SOG</span><span class="val" id="spd">0.0</span></div>
-            <div class="stat-box"><span class="lbl">COG</span><span class="val" id="cog">--</span></div>
-            <div class="stat-box"><span class="lbl">العمق</span><span class="val">18.5m</span></div>
-            <div class="stat-box"><span class="lbl">الرياح</span><span class="val">12kt</span></div>
+            <div class="stat"><span class="lbl">السرعة</span><span class="val" id="spd">0.0</span></div>
+            <div class="stat"><span class="lbl">الاتجاه</span><span class="val" id="cog">360°</span></div>
+            <div class="stat"><span class="lbl">العمق</span><span class="val">18.2m</span></div>
+            <div class="stat"><span class="lbl">الرياح</span><span class="val">14kt</span></div>
         </div>
 
-        <div class="sos-btn" onclick="triggerSOS()">SOS</div>
+        <div class="sos" onclick="sendSOS()">SOS</div>
 
         <div class="bottom-nav">
-            <div class="nav-item" onclick="toggleAR()">👓<br>الواقع المعزز</div>
-            <div class="nav-item">🌦️<br>الطقس</div>
+            <div class="nav-item">🧭<br>AR</div>
+            <div class="nav-item">🌦️<br>طقس</div>
             <div class="nav-item" style="color:var(--neon)">⚓<br>خرائط</div>
-            <div class="nav-item">📞<br>الطوارئ</div>
+            <div class="nav-item">📞<br>طوارئ</div>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // 1. تشغيل الخريطة (Navionics/Esri Hybrid)
-        const map = L.map('map', { zoomControl: false,
+        // تشغيل الخريطة فوراً في الخلفية
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
+
+        // طلب الموقع فوراً
+        map.locate({setView: true, watch: true, enableHighAccuracy: true});
+        map.on('locationfound', (e) => {
+            if (!window.m) window.m = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 8}).addTo(map);
+            else window.m.setLatLng(e.latlng);
+            document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+        });
+
+        // إخفاء شاشة البداية تلقائياً بعد 4 ثوانٍ
+        setTimeout(() => {
+            document.getElementById('intro-screen').style.opacity = '0';
+            setTimeout(() => document.getElementById('intro-screen').style.display = 'none', 1000);
+            
+            // ترحيب صوتي عند الدخول
+            const msg = new SpeechSynthesisUtterance("Welcome Captain Ahmad. Systems Online.");
+            window.speechSynthesis.speak(msg);
+        }, 4000);
+
+        function sendSOS() {
+            window.location.href = "tel:994";
+        }
+    </script>
+</body>
+</html>
