@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN OCEAN ATLAS V30</title>
+    <title>ZAN MARINER PRO V31</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --deep-blue: #001a33; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: 'Arial', sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: var(--deep-blue) !important; }
+        :root { --neon: #00f2ff; --panel: rgba(0, 10, 20, 0.95); }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        /* HUD الملاحي الاحترافي */
-        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 26, 51, 0.9); display: flex; padding: 15px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(10px); }
-        .data-cell { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
-        .val { display: block; font-size: 1.5rem; font-weight: bold; color: #fff; }
-        .lbl { font-size: 10px; color: var(--neon); font-weight: bold; }
+        /* شريط المعلومات الملاحي */
+        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--panel); display: flex; padding: 15px 0; border-bottom: 3px solid var(--neon); box-shadow: 0 4px 20px rgba(0,242,255,0.3); }
+        .data-box { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.3); }
+        .d-val { display: block; font-size: 1.6rem; font-weight: bold; font-family: monospace; }
+        .d-lbl { font-size: 10px; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; }
 
-        .nav-controls { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
-        .btn-nautic { width: 55px; height: 55px; background: rgba(0, 26, 51, 0.9); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+        .side-ctrl { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .btn-nav { width: 60px; height: 60px; background: var(--panel); border: 2px solid var(--neon); border-radius: 15px; color: white; font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .btn-nav:active { transform: scale(0.9); background: var(--neon); color: #000; }
     </style>
 </head>
 <body>
@@ -25,50 +26,44 @@
     <div id="map"></div>
 
     <div class="mariner-hud">
-        <div class="data-cell"><span class="lbl">السرعة SOG</span><span class="val" id="spd">0.0</span></div>
-        <div class="data-cell"><span class="lbl">المنطقة</span><span class="val" id="zone" style="font-size: 12px;">جاري التحديد...</span></div>
-        <div class="data-cell"><span class="lbl">GPS الإحداثيات</span><span class="val" id="pos" style="font-size: 10px;">...</span></div>
+        <div class="data-box"><span class="d-lbl">SOG السرعة</span><span class="d-val" id="spd">0.0</span></div>
+        <div class="data-box"><span class="d-lbl">COG الاتجاه</span><span class="d-val" id="cog">--</span></div>
+        <div class="data-box"><span class="d-lbl">GPS الإحداثيات</span><span class="d-val" id="pos" style="font-size: 10px;">...</span></div>
     </div>
 
-    <div class="nav-controls">
-        <div class="btn-nautic" onclick="toggleMarineBase()" title="تبديل وضع الأعماق">🌊</div>
-        <div class="btn-nautic" onclick="map.locate({setView: true})">🧭</div>
-        <div class="btn-nautic" onclick="location.reload()">🔄</div>
+    <div class="side-ctrl">
+        <div class="btn-nav" onclick="map.locate({setView: true})">🧭</div>
+        <div class="btn-nav" onclick="location.reload()">🔄</div>
+        <div class="btn-nav" onclick="toggleMarine()">🌍</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
         
-        // 1. خريطة تضاريس المحيطات العالمية (تظهر خطوط القاع والأعماق)
-        const oceanBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
-        
-        // 2. طبقة المسميات الجغرافية البحرية (جزر، شعاب، ممرات)
+        // المصدر الصارم: بيانات ملاحية عالمية (Esri Oceans)
+        const marineBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
         const marineLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}').addTo(map);
-
-        // 3. طبقة العلامات البحرية (OpenSeaMap)
+        
+        // طبقة العلامات الملاحية (عوامات وشعاب)
         const seaMarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
 
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
             document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
             document.getElementById('pos').innerText = e.lat.toFixed(4) + "," + e.lng.toFixed(4);
             
-            // محاكاة التعرف على المنطقة بناءً على الإحداثيات
-            if (e.lat > 21.6) document.getElementById('zone').innerText = "شرم أبحر";
-            else if (e.lat < 21.4) document.getElementById('zone').innerText = "منطقة الميناء";
-            else document.getElementById('zone').innerText = "واجهة جدة";
-
             if (!window.boat) {
-                window.boat = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1, weight: 3}).addTo(map);
+                window.boat = L.circleMarker(e.latlng, {color: '#ff0055', radius: 10, fillOpacity: 1, weight: 4, stroke: true}).addTo(map);
             } else {
                 window.boat.setLatLng(e.latlng);
             }
         });
 
-        function toggleMarineBase() {
-            if (map.hasLayer(oceanBase)) {
-                map.removeLayer(oceanBase);
+        function toggleMarine() {
+            if (map.hasLayer(marineBase)) {
+                map.removeLayer(marineBase);
                 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
                 alert("وضع القمر الصناعي");
             } else {
