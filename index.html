@@ -3,143 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN PRO MARINER | OsmAnd Edition</title>
+    <title>ZAN SMART MARINER | النسخة الاحترافية</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <style>
-        :root { --neon: #00f2ff; --glass: rgba(10, 25, 41, 0.85); --accent: #00ff88; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Cairo', sans-serif; background: #000; overflow: hidden; }
+        :root { --neon: #00f2ff; --glass: rgba(10, 25, 41, 0.9); }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; background: #000; overflow: hidden; }
 
-        /* الشاشة الافتتاحية */
-        #intro { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 1s; }
-        .zan-title { font-family: 'Orbitron'; font-size: 4rem; color: var(--neon); text-shadow: 0 0 20px var(--neon); }
-        .start-btn { margin-top: 30px; padding: 12px 40px; background: none; border: 2px solid var(--neon); color: var(--neon); border-radius: 50px; cursor: pointer; font-family: 'Orbitron'; box-shadow: 0 0 10px var(--neon); }
+        /* كاميرا الواقع المعزز خلف الخريطة */
+        #ar-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; opacity: 0.6; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; }
 
-        #map { height: 100vh; width: 100vw; z-index: 1; }
+        .hud-top { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--glass); display: flex; padding: 10px 0; border-bottom: 2px solid var(--neon); }
+        .stat { flex: 1; text-align: center; color: white; }
+        .val { display: block; font-size: 1.2rem; font-weight: bold; }
+        .lbl { font-size: 0.7rem; color: var(--neon); }
 
-        /* HUD علوي بأسلوب OsmAnd */
-        .top-bar { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 100; display: flex; gap: 10px; pointer-events: none; }
-        .stat-card { flex: 1; background: var(--glass); border-radius: 8px; border-bottom: 3px solid var(--neon); padding: 8px; text-align: center; pointer-events: auto; backdrop-filter: blur(10px); }
-        .stat-val { font-family: 'Orbitron'; font-size: 1.1rem; color: #fff; display: block; }
-        .stat-lbl { font-size: 9px; color: var(--neon); text-transform: uppercase; }
+        /* أزرار التحكم */
+        .controls { position: absolute; right: 15px; top: 80px; z-index: 10; display: flex; flex-direction: column; gap: 15px; }
+        .btn { width: 55px; height: 55px; background: var(--glass); border: 1.5px solid var(--neon); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; pointer-events: auto; }
 
-        /* أزرار التحكم الجانبية */
-        .side-ctrl { position: absolute; right: 10px; top: 100px; z-index: 100; display: flex; flex-direction: column; gap: 15px; }
-        .circle-btn { width: 50px; height: 50px; background: var(--glass); border: 1px solid var(--neon); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-
-        /* لوحة المسارات السفلية (OsmAnd Track Style) */
-        .track-panel { position: absolute; bottom: 0; left: 0; width: 100%; background: var(--glass); border-top: 1px solid rgba(255,255,255,0.1); z-index: 100; padding: 15px; box-sizing: border-box; border-radius: 20px 20px 0 0; display: none; }
-        .track-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .track-info { border-right: 1px solid rgba(0,242,255,0.2); padding: 0 10px; }
-        .track-info:last-child { border: none; }
-
-        .sos-btn { position: absolute; bottom: 100px; left: 20px; width: 60px; height: 60px; background: red; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; z-index: 100; border: 2px solid white; animation: pulse 2s infinite; text-decoration: none; box-shadow: 0 0 20px red; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        /* زر SOS المطور */
+        .sos-btn { position: absolute; bottom: 30px; left: 20px; width: 70px; height: 70px; background: red; border-radius: 50%; z-index: 100; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; animation: pulse 2s infinite; text-decoration: none; box-shadow: 0 0 20px red; }
+        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
     </style>
 </head>
 <body>
 
-    <div id="intro">
-        <div class="zan-title">ZAN</div>
-        <div style="color: var(--neon); font-size: 10px; letter-spacing: 5px;">PRO MARINER EDITION</div>
-        <button class="start-btn" onclick="initZan()">START MISSION</button>
-    </div>
-
+    <video id="ar-video" autoplay playsinline></video>
     <div id="map"></div>
 
-    <div class="top-bar">
-        <div class="stat-card"><span class="stat-lbl">السرعة SOG</span><span class="stat-val" id="spd">0.0</span></div>
-        <div class="stat-card"><span class="stat-lbl">الاتجاه COG</span><span class="stat-val" id="cog">--</span></div>
-        <div class="stat-card"><span class="stat-lbl">العمق</span><span class="stat-val">12.5m</span></div>
+    <div class="hud-top">
+        <div class="stat"><span class="lbl">SOG (عقدة)</span><span class="val" id="spd">0.0</span></div>
+        <div class="stat"><span class="lbl">COG (درجة)</span><span class="val" id="cog">--</span></div>
+        <div class="stat"><span class="lbl">إحداثياتك</span><span class="val" id="coords" style="font-size: 10px;">بانتظار GPS</span></div>
     </div>
 
-    <div class="side-ctrl">
-        <div class="circle-btn" onclick="toggleAR()">👓</div>
-        <div class="circle-btn" onclick="toggleAIS()">🚢</div>
-        <div class="circle-btn">🌦️</div>
-        <div class="circle-btn" style="color: var(--neon);">🗺️</div>
+    <div class="controls">
+        <div class="btn" onclick="toggleAR()" title="الواقع المعزز">👓</div>
+        <div class="btn" onclick="toggleRadar()" title="الرادار">📡</div>
+        <div class="btn" onclick="map.locate({setView: true})">🧭</div>
     </div>
 
-    <a href="tel:994" class="sos-btn">SOS</a>
+    <div class="sos-btn" onclick="sendSOS()">SOS</div>
 
-    <div class="track-panel" id="trackBox">
-        <div class="track-grid">
-            <div class="track-info"><span class="stat-lbl">المسافة</span><span class="stat-val">4.2 nm</span></div>
-            <div class="track-info"><span class="stat-lbl">الوقت</span><span class="stat-val">00:45:12</span></div>
-            <div class="track-info"><span class="stat-lbl">AIS نشط</span><span class="stat-val" id="ais-count">0</span></div>
-        </div>
-        <div style="margin-top: 15px; display: flex; justify-content: space-between; font-size: 12px; color: var(--accent);">
-            <span>● حالة المحرك: مستقرة</span>
-            <span>● حرارة الزيت: 82°C</span>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
+        // تفعيل الخريطة مع طبقة الأعماق (OpenSeaMap)
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 13);
         
-        // طبقة القمر الصناعي الأساسية
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-        // طبقة العلامات الملاحية
-        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
+        // طبقة القمر الصناعي
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+        // طبقة الأعماق والعلامات الملاحية
+        const seaMarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png');
+        
+        satellite.addTo(map);
+        seaMarks.addTo(map);
 
-        let aisActive = false;
-        let aisLayer = L.layerGroup();
+        let userLoc = null;
 
-        function initZan() {
-            document.getElementById('intro').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('intro').style.display = 'none';
-                document.getElementById('trackBox').style.display = 'block';
-            }, 1000);
-
-            map.locate({setView: true, watch: true, enableHighAccuracy: true});
-            
-            const msg = new SpeechSynthesisUtterance("Captain Ahmad, Welcome to ZAN Pro Mariner. All systems are online.");
-            window.speechSynthesis.speak(msg);
+        // تفعيل الرادار و AIS
+        function toggleRadar() {
+            alert("جاري سحس بيانات AIS للسفن المحيطة بموقعك...");
+            // هنا يتم إضافة الأيقونات الحمراء للسفن
         }
 
-        function toggleAIS() {
-            aisActive = !aisActive;
-            if(aisActive) {
-                aisLayer.addTo(map);
-                updateAIS();
-                alert("تم تفعيل رادار تتبع السفن AIS");
+        // تشغيل الواقع المعزز (الكاميرا)
+        async function toggleAR() {
+            const video = document.getElementById('ar-video');
+            if (video.style.display === 'none' || video.style.display === '') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    document.getElementById('map').style.opacity = '0.5';
+                } catch (e) { alert("تأكد من إعطاء إذن الكاميرا وتشغيل HTTPS"); }
             } else {
-                map.removeLayer(aisLayer);
-                document.getElementById('ais-count').innerText = "0";
+                video.style.display = 'none';
+                document.getElementById('map').style.opacity = '1';
             }
         }
 
-        function updateAIS() {
-            aisLayer.clearLayers();
-            const c = map.getCenter();
-            // محاكاة سفن قريبة
-            const ships = [
-                {n: "MMSI:234001", lat: c.lat + 0.015, lng: c.lng + 0.01},
-                {n: "MMSI:567002", lat: c.lat - 0.01, lng: c.lng - 0.02}
-            ];
-            ships.forEach(s => {
-                L.circleMarker([s.lat, s.lng], {color: 'red', radius: 8}).bindPopup(s.n).addTo(aisLayer);
-            });
-            document.getElementById('ais-count').innerText = ships.length;
+        // نظام الاستغاثة (الإحداثيات + SMS)
+        function sendSOS() {
+            if (!userLoc) { alert("لا توجد إحداثيات حالياً!"); return; }
+            const lat = userLoc.lat.toFixed(5);
+            const lng = userLoc.lng.toFixed(5);
+            const phone = prompt("أدخل رقم الجوال المؤقت لإرسال الاستغاثة (مثال: 05xxxxxxx):");
+            if (phone) {
+                const msg = `استغاثة طارئة! موقعي: https://www.google.com/maps?q=${lat},${lng}`;
+                window.location.href = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+            }
         }
 
         map.on('locationfound', (e) => {
-            if (!window.myShip) {
-                window.myShip = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1}).addTo(map);
-            } else {
-                window.myShip.setLatLng(e.latlng);
-            }
+            userLoc = e.latlng;
+            if (!window.ship) window.ship = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1}).addTo(map);
+            else window.ship.setLatLng(e.latlng);
+            document.getElementById('coords').innerText = `${e.lat.toFixed(4)}, ${e.lng.toFixed(4)}`;
             document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
-            if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
         });
 
-        function toggleAR() {
-            alert("بدء تشغيل الواقع المعزز لتحديد العلامات الملاحية...");
-        }
+        map.locate({watch: true, enableHighAccuracy: true});
     </script>
 </body>
 </html>
