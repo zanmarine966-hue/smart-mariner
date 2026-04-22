@@ -3,114 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN PRO MARINER V25</title>
+    <title>ZAN AR MARINER V26</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --glass: rgba(6, 18, 30, 0.8); }
+        :root { --neon: #00f2ff; --dark: rgba(6, 18, 30, 0.9); }
         body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
         
-        /* الكاميرا كخلفية أساسية */
-        #ar-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; }
+        /* الكاميرا هي الطبقة 0 (الخلفية) */
+        #ar-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; }
         
-        /* الخريطة فوق الكاميرا بوضوح */
-        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; }
+        /* الخريطة هي الطبقة 1 (فوق الكاميرا) */
+        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; transition: opacity 0.5s ease; }
         .leaflet-container { background: transparent !important; }
 
-        /* شريط البيانات العلوي */
-        .hud { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--glass); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(5px); }
-        .stat { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
-        .stat-val { display: block; font-size: 1.4rem; font-weight: bold; }
-        .stat-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
+        /* HUD العلوي */
+        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--dark); display: flex; padding: 10px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(5px); }
+        .nav-stat { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
+        .n-val { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
+        .n-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
 
-        /* الأزرار الجانبية المحدثة */
-        .side-menu { position: absolute; right: 15px; top: 90px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
-        .btn-tool { width: 50px; height: 50px; background: var(--glass); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        
-        /* تمييز السفن AIS */
-        .ais-icon { filter: drop-shadow(0 0 5px red); }
+        /* قائمة الأدوات الجانبية */
+        .side-toolbar { position: absolute; right: 15px; top: 90px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
+        .tool-btn { width: 50px; height: 50px; background: var(--dark); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-    <video id="ar-canvas" autoplay playsinline></video>
+    <video id="ar-video" autoplay playsinline></video>
     <div id="map"></div>
 
-    <div class="hud">
-        <div class="stat"><span class="stat-lbl">SOG السرعة</span><span class="stat-val" id="speed">0.0</span></div>
-        <div class="stat"><span class="stat-lbl">COG الاتجاه</span><span class="stat-val" id="cog">--</span></div>
-        <div class="stat"><span class="stat-lbl">GPS الإحداثيات</span><span class="stat-val" id="pos" style="font-size: 10px;">...</span></div>
+    <div class="nav-hud">
+        <div class="nav-stat"><span class="n-lbl">السرعة SOG</span><span class="n-val" id="spd">0.0</span></div>
+        <div class="nav-stat"><span class="n-lbl">الاتجاه COG</span><span class="n-val" id="cog">--</span></div>
+        <div class="nav-stat"><span class="n-lbl">GPS</span><span class="n-val" id="pos" style="font-size: 10px;">...</span></div>
     </div>
 
-    <div class="side-menu">
-        <div class="btn-tool" onclick="toggleAR()" title="واقع معزز">👓</div>
-        <div class="btn-tool" onclick="toggleSeaMarks()" title="العلامات البحرية">⚓</div>
-        <div class="btn-tool" onclick="toggleAIS()" title="رادار السفن">🚢</div>
-        <div class="btn-tool" onclick="map.locate({setView: true})">🧭</div>
-        <div class="btn-tool" onclick="location.reload()">🔄</div>
+    <div class="side-toolbar">
+        <div class="tool-btn" onclick="toggleAR()" title="تشغيل الواقع المعزز">👓</div>
+        <div class="tool-btn" onclick="toggleSatellite()" title="تبديل الخريطة">🌍</div>
+        <div class="tool-btn" onclick="toggleAIS()" title="رادار السفن">🚢</div>
+        <div class="tool-btn" onclick="map.locate({setView: true})">🧭</div>
+        <div class="tool-btn" onclick="location.reload()">🔄</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
         
-        // طبقة القمر الصناعي (الأساسية)
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-        
-        // طبقة العلامات البحرية (شفافة فوق القمر الصناعي)
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
         const seaMarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
 
         let aisLayer = L.layerGroup().addTo(map);
         let arActive = false;
 
-        // تفعيل GPS والبيانات الملاحية
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
-            document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
             if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
             document.getElementById('pos').innerText = e.lat.toFixed(4) + "," + e.lng.toFixed(4);
             
-            if (!window.myLoc) {
-                window.myLoc = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 8, fillOpacity: 1}).addTo(map);
+            if (!window.shipMarker) {
+                window.shipMarker = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 8, fillOpacity: 1}).addTo(map);
             } else {
-                window.myLoc.setLatLng(e.latlng);
+                window.shipMarker.setLatLng(e.latlng);
             }
         });
 
-        // تشغيل/إيقاف الواقع المعزز
+        // تفعيل ميزة الشفافية والواقع المعزز
         async function toggleAR() {
-            const v = document.getElementById('ar-canvas');
+            const v = document.getElementById('ar-video');
+            const m = document.getElementById('map');
             if (!arActive) {
                 try {
-                    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                    v.srcObject = s; v.style.display = 'block';
-                    document.getElementById('map').style.opacity = '0.6';
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    v.srcObject = stream;
+                    v.style.display = 'block';
+                    m.style.opacity = '0.4'; // جعل الخريطة شفافة لرؤية البحر
                     arActive = true;
-                } catch (e) { alert("يرجى تفعيل الكاميرا"); }
+                } catch (e) { alert("يرجى السماح بالوصول للكاميرا"); }
             } else {
-                v.style.display = 'none'; document.getElementById('map').style.opacity = '1';
+                v.style.display = 'none';
+                m.style.opacity = '1';
                 arActive = false;
             }
         }
 
-        // إخفاء/إظهار العلامات البحرية
-        function toggleSeaMarks() {
-            if (map.hasLayer(seaMarks)) map.removeLayer(seaMarks);
-            else seaMarks.addTo(map);
+        function toggleSatellite() {
+            if (map.hasLayer(satLayer)) map.removeLayer(satLayer);
+            else satLayer.addTo(map);
         }
 
-        // تحديث رادار السفن AIS (محاكاة تفاعلية)
         function toggleAIS() {
-            if (map.hasLayer(aisLayer)) {
-                map.removeLayer(aisLayer);
-                alert("تم إخفاء الرادار");
-            } else {
+            if (map.hasLayer(aisLayer)) map.removeLayer(aisLayer);
+            else {
                 aisLayer.addTo(map);
+                // محاكاة سفينة قريبة في الميناء
                 const c = map.getCenter();
-                // إضافة سفن افتراضية في ميناء جدة للتجربة
                 L.marker([c.lat + 0.005, c.lng + 0.005], {
-                    icon: L.divIcon({className:'ais-icon', html:'<b style="color:red; font-size:20px;">▲</b>'})
-                }).addTo(aisLayer).bindPopup("سفينة تجارية - 12 عقدة");
-                alert("تفعيل رادار AIS");
+                    icon: L.divIcon({className:'', html:'<b style="color:#ff003c; font-size:25px; text-shadow: 0 0 10px #ff003c;">▲</b>'})
+                }).addTo(aisLayer);
             }
         }
     </script>
