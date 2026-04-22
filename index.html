@@ -1,29 +1,101 @@
-<script>
-    // دالة محاكاة الرادار الحي بناءً على موقعك الفعلي
-    function startLiveRadar() {
-        if (!userPos) {
-            alert("يرجى تفعيل الـ GPS أولاً للبدء بمسح المنطقة");
-            return;
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ZAN AR MARINER | FIX V21.1</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root { --neon: #00f2ff; --glass: rgba(10, 25, 41, 0.85); }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; background: #000; overflow: hidden; }
+        
+        /* شاشة البداية لمنع الشاشة البيضاء */
+        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #0a1929, #000); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--neon); text-align: center; }
+        #start-btn { padding: 20px 50px; background: none; border: 2px solid var(--neon); color: var(--neon); border-radius: 50px; font-size: 1.5rem; cursor: pointer; margin-top: 20px; box-shadow: 0 0 15px var(--neon); font-weight: bold; }
+
+        /* العناصر الأساسية */
+        #ar-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; opacity: 1; transition: 0.5s; }
+        .leaflet-container { background: transparent !important; }
+
+        /* الواجهة العلوية */
+        .hud-top { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--glass); display: flex; padding: 15px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(10px); visibility: hidden; }
+        .stat-item { flex: 1; text-align: center; color: #fff; }
+        .stat-val { display: block; font-size: 1.4rem; font-weight: bold; font-family: monospace; }
+        .stat-lbl { font-size: 10px; color: var(--neon); text-transform: uppercase; }
+
+        /* الأزرار الجانبية */
+        #ui-controls { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; visibility: hidden; }
+        .side-btn { width: 55px; height: 55px; background: var(--glass); border: 1.5px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="splash-screen">
+        <h1 style="font-size: 3rem; margin: 0;">ZAN PRO</h1>
+        <p style="letter-spacing: 5px;">NAUTICAL AR SYSTEM</p>
+        <button id="start-btn" onclick="initSystem()">START MISSION</button>
+        <p style="font-size: 12px; margin-top: 20px; color: #555;">يرجى الضغط لتفعيل الكاميرا والخرائط</p>
+    </div>
+
+    <video id="ar-video" autoplay playsinline></video>
+    <div id="map"></div>
+
+    <div class="hud-top" id="main-hud">
+        <div class="stat-item"><span class="stat-lbl">السرعة SOG</span><span class="stat-val" id="spd">0.0</span></div>
+        <div class="stat-item"><span class="stat-lbl">الاتجاه COG</span><span class="stat-val" id="cog">--</span></div>
+    </div>
+
+    <div id="ui-controls">
+        <div class="side-btn" onclick="toggleAR()">👓</div>
+        <div class="side-btn" onclick="map.locate({setView: true})">🧭</div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map, userMarker, isAR = false;
+
+        function initSystem() {
+            // 1. إخفاء شاشة البداية وإظهار الواجهة
+            document.getElementById('splash-screen').style.display = 'none';
+            document.getElementById('main-hud').style.visibility = 'visible';
+            document.getElementById('ui-controls').style.visibility = 'visible';
+
+            // 2. تشغيل الخريطة (OsmAnd Style)
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 13);
+            L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+
+            // 3. طلب أذونات الموقع
+            map.locate({watch: true, enableHighAccuracy: true});
+            
+            map.on('locationfound', (e) => {
+                if (!userMarker) userMarker = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1}).addTo(map);
+                else userMarker.setLatLng(e.latlng);
+                document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            });
+
+            // 4. الترحيب الصوتي
+            const speech = new SpeechSynthesisUtterance("System initialized. Welcome Captain Ahmad.");
+            window.speechSynthesis.speak(speech);
         }
 
-        alert("بدء مسح الرادار AIS للمنطقة المحيطة...");
-        
-        // محاكاة جلب بيانات السفن الحقيقية حول موقعك
-        const mockShips = [
-            { name: "NA ناقلة نفط", lat: userPos.lat + 0.005, lng: userPos.lng + 0.003, speed: "12 عقدة" },
-            { name: "YACHT 777", lat: userPos.lat - 0.008, lng: userPos.lng - 0.005, speed: "22 عقدة" }
-        ];
-
-        mockShips.forEach(ship => {
-            const shipMarker = L.marker([ship.lat, ship.lng], {
-                icon: L.divIcon({
-                    className: 'radar-ship',
-                    html: `<div style="background:red; width:10px; height:10px; border-radius:50%; box-shadow:0 0 10px red;"></div>
-                           <span style="color:white; font-size:10px; white-space:nowrap;">${ship.name}</span>`
-                })
-            }).addTo(aisLayer);
-            
-            shipMarker.bindPopup(`<b>سفينة مكتشفة</b><br>السرعة: ${ship.speed}`);
-        });
-    }
-</script>
+        async function toggleAR() {
+            const video = document.getElementById('ar-video');
+            if (!isAR) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    document.getElementById('map').style.opacity = '0.6';
+                    isAR = true;
+                } catch (e) { alert("يرجى تفعيل إذن الكاميرا"); }
+            } else {
+                video.style.display = 'none';
+                document.getElementById('map').style.opacity = '1';
+                isAR = false;
+            }
+        }
+    </script>
+</body>
+</html>
