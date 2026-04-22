@@ -3,73 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE ULTIMATE V32</title>
+    <title>ZAN MARINER ULTIMATE V33</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --dark: #000a14; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--dark); overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: var(--dark); }
+        :root { --neon: #00f2ff; --bg: #000b14; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: var(--bg); }
         
-        /* شريط المعلومات الاحترافي */
-        .hud-v32 { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 10, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(8px); }
-        .hud-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
-        .v-val { display: block; font-size: 1.4rem; font-weight: bold; font-family: monospace; }
+        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.95); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(10px); }
+        .data-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
+        .v-data { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
         .v-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
 
-        .controls-v32 { position: absolute; right: 15px; top: 90px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
-        .c-btn { width: 55px; height: 55px; background: rgba(0, 10, 20, 0.9); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+        .btn-stack { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .m-btn { width: 55px; height: 55px; background: rgba(0, 11, 20, 0.9); border: 2px solid var(--neon); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
 
-    <div class="hud-v32">
-        <div class="hud-item"><span class="v-lbl">SOG السرعة</span><span class="v-val" id="spd">0.0</span></div>
-        <div class="hud-item"><span class="v-lbl">COG الاتجاه</span><span class="v-val" id="cog">115°</span></div>
-        <div class="hud-item"><span class="v-lbl">GPS الإحداثيات</span><span class="v-val" id="pos" style="font-size: 10px;">...</span></div>
+    <div class="nav-hud">
+        <div class="data-item"><span class="v-lbl">SOG السرعة</span><span class="v-data" id="spd">0.1</span></div>
+        <div class="data-item"><span class="v-lbl">COG الاتجاه</span><span class="v-data" id="cog">--</span></div>
+        <div class="data-item"><span class="v-lbl">GPS الإحداثيات</span><span class="v-data" id="pos" style="font-size: 10px;">...</span></div>
     </div>
 
-    <div class="controls-v32">
-        <div class="c-btn" onclick="map.locate({setView: true})">🧭</div>
-        <div class="c-btn" onclick="toggleSatellite()">🌍</div>
-        <div class="c-btn" onclick="location.reload()">🔄</div>
+    <div class="btn-stack">
+        <div class="m-btn" onclick="map.locate({setView: true})">🧭</div>
+        <div class="m-btn" onclick="toggleSatellite()">🌍</div>
+        <div class="m-btn" onclick="location.reload()">🔄</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة مع حدود تكبير واسعة جداً لمنع الاختفاء
+        // إعداد الخريطة بأعلى مستويات التكبير المتاحة
         const map = L.map('map', { 
             zoomControl: false, 
             attributionControl: false,
-            maxZoom: 20,
-            minZoom: 5
+            maxZoom: 18 // الحد الأقصى لدقة البيانات الملاحية
         }).setView([21.45, 39.12], 12);
         
-        // المصادر الملاحية المتداخلة لضمان استمرارية البيانات
-        const marineBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 });
-        const streetBase = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20 });
-        const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
-        const seaMarks = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+        // 1. خريطة الأعماق والتضاريس (World Ocean Base) - لا تختفي عند التكبير
+        const oceanBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
+        
+        // 2. طبقة المسميات الملاحية التفصيلية (جزر، شعاب، ممرات)
+        const oceanRef = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-        // تفعيل الطبقة الملاحية كأساس
-        marineBase.addTo(map);
-
-        // منطق ذكي: إذا زاد التكبير عن 13، انتقل لطبقة الشوارع/التفصيلية لمنع الرسالة
-        map.on('zoomend', function() {
-            if (map.getZoom() > 13) {
-                if (map.hasLayer(marineBase)) {
-                    map.removeLayer(marineBase);
-                    streetBase.addTo(map);
-                }
-            } else {
-                if (map.hasLayer(streetBase)) {
-                    map.removeLayer(streetBase);
-                    marineBase.addTo(map);
-                }
-            }
-        });
-
+        // تتبع الموقع والسرعة بشكل حي
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
             document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
@@ -83,11 +64,11 @@
             }
         });
 
-        let satMode = false;
         function toggleSatellite() {
-            if (!satMode) {
+            if (map.hasLayer(oceanBase)) {
+                map.removeLayer(oceanBase);
                 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
-                satMode = true;
+                alert("تم التبديل لوضع القمر الصناعي");
             } else {
                 location.reload();
             }
