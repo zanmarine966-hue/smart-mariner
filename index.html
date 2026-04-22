@@ -3,117 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN SMART MARINER | النسخة الاحترافية</title>
+    <title>Smart Mariner | البحّار الذكي</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+    
     <style>
-        :root { --neon-blue: #00f2ff; --neon-green: #0cf32b; --neon-red: #ff003c; --glass: rgba(10, 25, 41, 0.85); }
-        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Cairo', sans-serif; background: #000; color: #fff; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; z-index: 1; filter: brightness(0.8) contrast(1.2); }
-        
-        /* واجهة الصورة الرابعة - التقنية العالية */
-        .hud-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; display: grid; grid-template-columns: 280px 1fr 280px; grid-template-rows: 80px 1fr 150px; gap: 15px; padding: 20px; box-sizing: border-box; }
-        .glass-panel { pointer-events: auto; background: var(--glass); backdrop-filter: blur(10px); border: 1px solid rgba(0, 242, 255, 0.3); border-radius: 15px; padding: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        :root {
+            --neon-blue: #00f2ff;
+            --glass-bg: rgba(10, 25, 41, 0.8);
+            --danger-red: #ff3e3e;
+        }
 
-        /* شريط الأحوال الجوية العلوي */
-        .weather-bar { grid-column: 1 / 4; display: flex; justify-content: space-around; align-items: center; border-bottom: 2px solid var(--neon-blue); }
-        .stat { text-align: center; } .stat label { display: block; font-size: 10px; color: var(--neon-blue); text-transform: uppercase; }
-        .stat value { font-family: 'Orbitron', sans-serif; font-size: 18px; color: #fff; }
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%; 
+            font-family: 'Cairo', sans-serif; background: #000; overflow: hidden;
+        }
 
-        /* لوحة صيانة المحركات (Engine Monitor) */
-        .engine-panel { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 10px; }
-        .gauge-container { margin-bottom: 10px; }
-        .progress-bar { height: 8px; background: #222; border-radius: 4px; margin-top: 5px; position: relative; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-green), var(--neon-blue)); width: 75%; }
+        /* حاوية الخريطة */
+        #map { height: 100vh; width: 100vw; z-index: 1; }
 
-        /* وضع الواقع المعزز (AR Mode) */
-        .ar-view { grid-column: 2; grid-row: 2; border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; width: 300px; height: 300px; align-self: center; justify-self: center; position: relative; display: flex; align-items: center; justify-content: center; }
-        .radar-line { width: 50%; height: 2px; background: var(--neon-green); position: absolute; top: 50%; left: 50%; transform-origin: left; animation: radar 4s linear infinite; }
-        @keyframes radar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* واجهة المستخدم العلوية (HUD) */
+        .hud-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 10px; box-sizing: border-box;
+        }
 
-        /* لوحة الأخطار الملاحية (صورة الخطابي) */
-        .danger-panel { grid-column: 3; grid-row: 2; }
-        .danger-item { color: var(--neon-red); font-size: 12px; margin-bottom: 8px; border-right: 3px solid var(--neon-red); padding-right: 8px; }
+        /* شريط المعلومات العلوي - تصميم زجاجي متوافق مع الجوال */
+        .top-bar {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+            background: var(--glass-bg); border: 1px solid var(--neon-blue);
+            border-radius: 12px; padding: 8px; pointer-events: auto;
+            backdrop-filter: blur(10px);
+        }
 
-        /* زر SOS والتحكم السفلي */
-        .bottom-bar { grid-column: 1 / 4; display: flex; justify-content: space-between; align-items: center; }
-        .sos-btn { width: 80px; height: 80px; background: var(--neon-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 4px solid #fff; box-shadow: 0 0 20px var(--neon-red); animation: pulse 1.5s infinite; cursor: pointer; color: #fff; text-decoration: none; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(255, 0, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0); } }
+        .stat-item { text-align: center; color: #fff; border-left: 1px solid rgba(0,242,255,0.2); }
+        .stat-item:last-child { border-left: none; }
+        .stat-label { font-size: 0.6rem; color: var(--neon-blue); display: block; }
+        .stat-value { font-size: 0.85rem; font-weight: bold; }
+
+        /* زر الطوارئ المطور */
+        .sos-btn {
+            position: absolute; bottom: 85px; right: 20px;
+            width: 65px; height: 65px; background: radial-gradient(#ff0000, #800000);
+            border-radius: 50%; border: 3px solid #fff; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 1.2rem; pointer-events: auto;
+            box-shadow: 0 0 20px rgba(255,0,0,0.6); animation: pulse 1.5s infinite;
+            text-decoration: none;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 0, 0, 0); }
+            100% { transform: scale(1); }
+        }
+
+        /* شريط التحكم السفلي */
+        .bottom-nav {
+            display: flex; justify-content: space-around;
+            background: var(--glass-bg); padding: 12px; border-radius: 20px 20px 0 0;
+            border-top: 2px solid var(--neon-blue); pointer-events: auto;
+        }
+
+        .nav-btn { color: #fff; font-size: 0.7rem; text-decoration: none; text-align: center; opacity: 0.8; }
+        .nav-btn i { display: block; font-size: 1.2rem; margin-bottom: 2px; }
+
+        /* لوحة البيانات الجانبية */
+        .side-panel {
+            position: absolute; top: 80px; right: 10px; width: 120px;
+            background: var(--glass-bg); border-radius: 10px; padding: 10px;
+            color: #fff; border: 1px solid rgba(0,242,255,0.3); pointer-events: auto;
+        }
+
     </style>
 </head>
 <body>
 
-    <div id="map"></div>
+<div id="map"></div>
 
-    <div class="hud-overlay">
-        <div class="glass-panel weather-bar">
-            <div class="stat"><label>الرياح</label><value>12 KNT</value></div>
-            <div class="stat"><label>الموج</label><value>0.8 M</value></div>
-            <div class="stat"><label>درجة الحرارة</label><value>32°C</value></div>
-            <div class="stat"><label>الرؤية</label><value>10 NM</value></div>
+<div class="hud-overlay">
+    <div class="top-bar">
+        <div class="stat-item">
+            <span class="stat-label">السرعة</span>
+            <span class="stat-value" id="speed">0.0</span> <small>KNT</small>
         </div>
-
-        <div class="glass-panel engine-panel">
-            <h4 style="margin:0; color:var(--neon-blue)">Engine Monitor</h4>
-            <div class="gauge-container">
-                <small>حرارة المحرك</small>
-                <div class="progress-bar"><div class="progress-fill" style="width: 65%;"></div></div>
-            </div>
-            <div class="gauge-container">
-                <small>ضغط الزيت</small>
-                <div class="progress-bar"><div class="progress-fill" style="width: 85%; background:var(--neon-green)"></div></div>
-            </div>
-            <div class="gauge-container">
-                <small>مستوى الوقود</small>
-                <div class="progress-bar"><div class="progress-fill" style="width: 40%; background:var(--neon-red)"></div></div>
-            </div>
+        <div class="stat-item">
+            <span class="stat-label">الاتجاه</span>
+            <span class="stat-value" id="heading">--</span>°
         </div>
-
-        <div class="ar-view">
-            <div class="radar-line"></div>
-            <div style="text-align: center; color: var(--neon-green); font-family: 'Orbitron';">
-                <div id="depth-val">15.4m</div>
-                <small>DEPTH</small>
-            </div>
+        <div class="stat-item">
+            <span class="stat-label">العمق</span>
+            <span class="stat-value" id="depth">8.5</span> <small>M</small>
         </div>
-
-        <div class="glass-panel danger-panel">
-            <h4 style="margin:0; color:var(--neon-red)">Navigational Dangers</h4>
-            <div class="danger-item">شعب صخرية - عمق 1.2م</div>
-            <div class="danger-item">حطام سفينة - منطقة محظورة</div>
-            <div class="danger-item">تيارات بحرية قوية</div>
-        </div>
-
-        <div class="bottom-bar">
-            <div class="glass-panel" style="width: 200px;">
-                <small>الإحداثيات الحالية</small>
-                <div style="font-family: 'Orbitron'; font-size: 14px; color: var(--neon-blue);">21° 32' N | 39° 10' E</div>
-            </div>
-            
-            <a href="tel:994" class="sos-btn">SOS</a>
-
-            <div class="glass-panel" style="width: 200px; text-align: left;">
-                <button style="background:var(--neon-blue); border:none; color:#000; padding:5px 15px; border-radius:5px; font-weight:bold; cursor:pointer;">AR MODE</button>
-            </div>
+        <div class="stat-item">
+            <span class="stat-label">الرياح</span>
+            <span class="stat-value">12</span> <small>KNT</small>
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // إعداد الخريطة البحرية المتقدمة (ESRI Oceans)
-        const map = L.map('map', { zoomControl: false }).setView([21.45, 39.12], 12);
-        
-        // طبقة الأعماق والبيانات البحرية الاحترافية
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
-        
-        // طبقة OpenSeaMap المخصصة لأسماء الجزر والقطع البحرية والأعماق
-        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
+    <div class="side-panel">
+        <small style="color: var(--danger-red);">⚠️ تنبيهات:</small>
+        <div style="font-size: 0.65rem; margin-top: 5px;">
+            • شعب ضحلة (1.2م)<br>
+            • منطقة محظورة
+        </div>
+    </div>
 
-        // محاكاة تغيير الأعماق في الرادار
-        setInterval(() => {
-            const depth = (Math.random() * (20 - 5) + 5).toFixed(1);
-            document.getElementById('depth-val').innerText = depth + 'm';
-        }, 3000);
-    </script>
+    <a href="tel:994" class="sos-btn">SOS</a>
+
+    <div class="bottom-nav">
+        <div class="nav-btn">🧭<span>رادار</span></div>
+        <div class="nav-btn">🌦️<span>طقس</span></div>
+        <div class="nav-btn">🛠️<span>المحرك</span></div>
+        <div class="nav-btn">⚓<span>نقاطي</span></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // إعداد الخريطة والطبقات من رابط Mariner Suite
+    var map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+    }).setView([21.4858, 39.1925], 13); // جدة
+
+    // طبقة خرائط المحيطات المتقدمة (ESRI Ocean)
+    var esriOcean = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 13
+    }).addTo(map);
+
+    // طبقة التفاصيل الملاحية والعمق (OpenSeaMap)
+    var seaMarks = L.tileLayer('https://tiles.openseamap.org/seamarks/{z}/{x}/{y}.png', {
+        maxZoom: 18
+    }).addTo(map);
+
+    // تحديث الموقع الفعلي
+    map.locate({setView: true, watch: true, enableHighAccuracy: true});
+
+    function onLocationFound(e) {
+        var radius = e.accuracy / 2;
+        if (!window.myMarker) {
+            window.myMarker = L.marker(e.latlng).addTo(map)
+                .bindPopup("موقعك الحالي").openPopup();
+        } else {
+            window.myMarker.setLatLng(e.latlng);
+        }
+    }
+    map.on('locationfound', onLocationFound);
+</script>
+
 </body>
 </html>
