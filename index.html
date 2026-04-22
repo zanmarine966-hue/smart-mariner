@@ -3,97 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN AR MARINER | FIX V21.1</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>ZAN SMART MARINER V22</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --glass: rgba(10, 25, 41, 0.85); }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: sans-serif; background: #000; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; overflow: hidden; font-family: Arial, sans-serif; }
         
-        /* شاشة البداية لمنع الشاشة البيضاء */
-        #splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #0a1929, #000); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--neon); text-align: center; }
-        #start-btn { padding: 20px 50px; background: none; border: 2px solid var(--neon); color: var(--neon); border-radius: 50px; font-size: 1.5rem; cursor: pointer; margin-top: 20px; box-shadow: 0 0 15px var(--neon); font-weight: bold; }
+        /* شاشة انطلاق بسيطة جداً لكسر الجمود */
+        #launch-pad { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #06121e; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #00f2ff; }
+        #start-btn { padding: 25px 60px; background: transparent; border: 3px solid #00f2ff; color: #00f2ff; border-radius: 50px; font-size: 24px; font-weight: bold; cursor: pointer; text-shadow: 0 0 10px #00f2ff; box-shadow: 0 0 20px rgba(0,242,255,0.3); }
 
-        /* العناصر الأساسية */
-        #ar-video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; opacity: 1; transition: 0.5s; }
+        #ar-stream { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; display: none; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: transparent !important; }
         .leaflet-container { background: transparent !important; }
 
-        /* الواجهة العلوية */
-        .hud-top { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--glass); display: flex; padding: 15px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(10px); visibility: hidden; }
-        .stat-item { flex: 1; text-align: center; color: #fff; }
-        .stat-val { display: block; font-size: 1.4rem; font-weight: bold; font-family: monospace; }
-        .stat-lbl { font-size: 10px; color: var(--neon); text-transform: uppercase; }
+        .ui-panel { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0,0,0,0.6); display: flex; padding: 10px 0; border-bottom: 2px solid #00f2ff; backdrop-filter: blur(5px); display: none; }
+        .stat { flex: 1; text-align: center; color: white; }
+        .val { display: block; font-size: 22px; font-weight: bold; }
+        .lbl { font-size: 10px; color: #00f2ff; }
 
-        /* الأزرار الجانبية */
-        #ui-controls { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; visibility: hidden; }
-        .side-btn { width: 55px; height: 55px; background: var(--glass); border: 1.5px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; }
+        .side-tools { position: absolute; right: 20px; top: 100px; z-index: 20; display: none; flex-direction: column; gap: 20px; }
+        .circle-btn { width: 60px; height: 60px; background: rgba(0,0,0,0.7); border: 2px solid #00f2ff; border-radius: 50%; color: white; font-size: 25px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
-    <div id="splash-screen">
-        <h1 style="font-size: 3rem; margin: 0;">ZAN PRO</h1>
-        <p style="letter-spacing: 5px;">NAUTICAL AR SYSTEM</p>
-        <button id="start-btn" onclick="initSystem()">START MISSION</button>
-        <p style="font-size: 12px; margin-top: 20px; color: #555;">يرجى الضغط لتفعيل الكاميرا والخرائط</p>
+    <div id="launch-pad">
+        <h1 style="margin:0;">ZAN PRO</h1>
+        <p style="margin-bottom:30px;">تجهيز الأنظمة الملاحية...</p>
+        <button id="start-btn" onclick="activateSystem()">START</button>
     </div>
 
-    <video id="ar-video" autoplay playsinline></video>
+    <video id="ar-stream" autoplay playsinline></video>
     <div id="map"></div>
 
-    <div class="hud-top" id="main-hud">
-        <div class="stat-item"><span class="stat-lbl">السرعة SOG</span><span class="stat-val" id="spd">0.0</span></div>
-        <div class="stat-item"><span class="stat-lbl">الاتجاه COG</span><span class="stat-val" id="cog">--</span></div>
+    <div class="ui-panel" id="top-hud">
+        <div class="stat"><span class="lbl">SOG السرعة</span><span class="val" id="speed">0.0</span></div>
+        <div class="stat"><span class="lbl">إحداثيات</span><span class="val" id="pos" style="font-size:12px;">--</span></div>
     </div>
 
-    <div id="ui-controls">
-        <div class="side-btn" onclick="toggleAR()">👓</div>
-        <div class="side-btn" onclick="map.locate({setView: true})">🧭</div>
+    <div class="side-tools" id="side-menu">
+        <div class="circle-btn" onclick="toggleCamera()">👓</div>
+        <div class="circle-btn" onclick="location.reload()">🔄</div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        let map, userMarker, isAR = false;
+        let map;
+        function activateSystem() {
+            // إخفاء شاشة التحميل
+            document.getElementById('launch-pad').style.display = 'none';
+            document.getElementById('top-hud').style.display = 'flex';
+            document.getElementById('side-menu').style.display = 'flex';
 
-        function initSystem() {
-            // 1. إخفاء شاشة البداية وإظهار الواجهة
-            document.getElementById('splash-screen').style.display = 'none';
-            document.getElementById('main-hud').style.visibility = 'visible';
-            document.getElementById('ui-controls').style.visibility = 'visible';
-
-            // 2. تشغيل الخريطة (OsmAnd Style)
+            // تشغيل الخريطة (فقط طبقة واحدة لضمان السرعة)
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 13);
-            L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png').addTo(map);
-            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-            // 3. طلب أذونات الموقع
+            // تفعيل GPS
             map.locate({watch: true, enableHighAccuracy: true});
-            
             map.on('locationfound', (e) => {
-                if (!userMarker) userMarker = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 1}).addTo(map);
-                else userMarker.setLatLng(e.latlng);
-                document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+                document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
+                document.getElementById('pos').innerText = e.lat.toFixed(4) + "," + e.lng.toFixed(4);
             });
-
-            // 4. الترحيب الصوتي
-            const speech = new SpeechSynthesisUtterance("System initialized. Welcome Captain Ahmad.");
-            window.speechSynthesis.speak(speech);
+            
+            alert("تم تشغيل النظام. اضغط على أيقونة النظارة لتشغيل الكاميرا.");
         }
 
-        async function toggleAR() {
-            const video = document.getElementById('ar-video');
-            if (!isAR) {
+        async function toggleCamera() {
+            const v = document.getElementById('ar-stream');
+            if (v.style.display === 'none' || !v.style.display) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                    video.srcObject = stream;
-                    video.style.display = 'block';
-                    document.getElementById('map').style.opacity = '0.6';
-                    isAR = true;
-                } catch (e) { alert("يرجى تفعيل إذن الكاميرا"); }
+                    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    v.srcObject = s;
+                    v.style.display = 'block';
+                    document.getElementById('map').style.opacity = '0.5';
+                } catch (err) { alert("عذراً: الكاميرا تتطلب رابط HTTPS آمن"); }
             } else {
-                video.style.display = 'none';
+                v.style.display = 'none';
                 document.getElementById('map').style.opacity = '1';
-                isAR = false;
             }
         }
     </script>
