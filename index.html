@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V40 - DEPTH NUMBERS</title>
+    <title>ZAN MARINE V42 - ARABIC PRO</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #000; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; }
+        :root { --neon: #00f2ff; --bg: #000b14; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: #001529; }
         
-        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 3px solid var(--neon); }
-        .data-cell { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
-        .val { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
-        .lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
+        /* الهيدر المطور */
+        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.95); display: flex; padding: 12px 0; border-bottom: 3px solid var(--neon); backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,242,255,0.3); }
+        .data-cell { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.15); }
+        .val { display: block; font-size: 1.6rem; font-weight: bold; font-family: 'Courier New', monospace; color: #fff; text-shadow: 0 0 8px var(--neon); }
+        .lbl { font-size: 10px; color: var(--neon); font-weight: bold; letter-spacing: 1px; }
 
-        .nav-tools { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
-        .btn-mariner { width: 55px; height: 55px; background: rgba(0, 11, 20, 0.9); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.8); }
+        .nav-tools { position: absolute; right: 15px; top: 110px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .btn-mariner { width: 58px; height: 58px; background: rgba(0, 15, 30, 0.9); border: 2px solid var(--neon); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.7); transition: 0.2s; }
+        .btn-mariner:active { transform: scale(0.9); background: var(--neon); color: black; }
     </style>
 </head>
 <body>
@@ -24,14 +26,14 @@
     <div id="map"></div>
 
     <div class="mariner-hud">
-        <div class="data-cell"><span class="lbl">SOG السرعة</span><span class="val" id="speed">0.0</span></div>
+        <div class="data-cell"><span class="lbl">SOG السرعة (عقدة)</span><span class="val" id="speed">0.0</span></div>
         <div class="data-cell"><span class="lbl">COG الاتجاه</span><span class="val" id="cog">--</span></div>
-        <div class="data-cell"><span class="lbl">GPS الإحداثيات</span><span class="val" id="pos" style="font-size: 10px;">...</span></div>
+        <div class="data-cell"><span class="lbl">GPS الإحداثيات</span><span class="val" id="pos" style="font-size: 11px;">جاري التحديد...</span></div>
     </div>
 
     <div class="nav-tools">
-        <div class="btn-mariner" onclick="map.locate({setView: true})">🧭</div>
-        <div class="btn-mariner" onclick="toggleDepth()" id="modeBtn">📏</div>
+        <div class="btn-mariner" onclick="map.locate({setView: true, maxZoom: 16})">🧭</div>
+        <div class="btn-mariner" onclick="toggleMapMode()" id="modeBtn" title="تبديل الخريطة">🛰️</div>
         <div class="btn-mariner" onclick="location.reload()">🔄</div>
     </div>
 
@@ -39,46 +41,43 @@
     <script>
         const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([21.45, 39.12], 13);
         
-        // 1. طبقة القمر الصناعي الأساسية
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22 });
+        // 1. طبقة الساتلايت (ثبات مطلق)
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22 }).addTo(map);
         
-        // 2. طبقة أرقام الأعماق والتخطيط الملاحي (Esri Ocean)
-        const depthData = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 13,
-            opacity: 1 // تظهر الأرقام والخطوط بوضوح
-        });
+        // 2. طبقة المسميات العربية والخطوط الملاحية (التي تشبه الخطابي)
+        const marineRef = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 20,
+            opacity: 1
+        }).addTo(map);
 
-        // 3. طبقة المسميات الملاحية (تعمل فوق كل شيء)
-        const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20 });
+        // 3. طبقة أعماق GEBCO المتقدمة (تظهر عند التبديل)
+        const depthLayer = L.tileLayer('https://tiles.emodnet-bathymetry.eu/2020/baselayer/web_mercator/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.8 });
 
-        // تفعيل وضع القمر الصناعي مع الأسماء افتراضياً
-        satellite.addTo(map);
-        labels.addTo(map);
-
-        // وظيفة التبديل لإظهار أرقام الأعماق بشكل كامل
-        function toggleDepth() {
-            if (map.hasLayer(satellite)) {
-                map.removeLayer(satellite);
-                depthData.addTo(map);
-                document.getElementById('modeBtn').style.color = '#00f2ff';
-                alert("تم تفعيل وضع أرقام الأعماق");
+        function toggleMapMode() {
+            if (map.hasLayer(depthLayer)) {
+                map.removeLayer(depthLayer);
+                document.getElementById('modeBtn').innerText = "🛰️";
             } else {
-                map.removeLayer(depthData);
-                satellite.addTo(map);
-                document.getElementById('modeBtn').style.color = 'white';
-                alert("تم العودة لوضع القمر الصناعي");
+                depthLayer.addTo(map);
+                document.getElementById('modeBtn').innerText = "🌊";
+                alert("تم تفعيل وضع الأعماق المطور");
             }
         }
 
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
-            document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            document.getElementById('speed').innerText = (e.speed * 1.94384 || 0).toFixed(1);
             if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
             document.getElementById('pos').innerText = e.lat.toFixed(5) + " , " + e.lng.toFixed(5);
             
             if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 0.8}).addTo(map);
-            } else { window.boatMarker.setLatLng(e.latlng); }
+                // أيقونة القارب (دائرة مضيئة)
+                window.boatMarker = L.circleMarker(e.latlng, {
+                    color: '#00f2ff', radius: 10, fillOpacity: 0.9, weight: 4, stroke: true
+                }).addTo(map);
+            } else {
+                window.boatMarker.setLatLng(e.latlng);
+            }
         });
     </script>
 </body>
