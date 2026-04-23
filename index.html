@@ -3,21 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V51 - HYDRO STYLE</title>
+    <title>ZAN MARINE V52 - ULTIMATE NAV</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #000; }
+        :root { --neon: #00f2ff; --white: #ffffff; --danger: #ff3b3b; }
         body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
         #map { height: 100vh; width: 100vw; z-index: 1; background: #c3d9ef; }
         
-        /* واجهة البيانات (HUD) مستوحاة من صورتك */
+        /* واجهة البيانات (HUD) بتباين عالٍ */
         .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0,0,0,0.9); display: flex; padding: 15px 0; border-bottom: 3px solid var(--neon); }
         .data-cell { flex: 1; text-align: center; border-left: 1px solid #333; }
-        .val { display: block; font-size: 1.8rem; font-weight: 900; color: #fff; text-shadow: 2px 2px #000; }
+        .val { display: block; font-size: 1.8rem; font-weight: 900; color: var(--white); text-shadow: 2px 2px #000; }
         .lbl { font-size: 10px; color: var(--neon); font-weight: bold; }
 
+        /* الأزرار الجانبية */
         .nav-tools { position: absolute; right: 15px; top: 120px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
-        .btn-mariner { width: 60px; height: 60px; background: #111; border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; box-shadow: 0 0 15px #000; }
+        .btn-mariner { width: 60px; height: 60px; background: #111; border: 3px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; box-shadow: 0 0 15px #000; }
         .active { background: var(--neon) !important; color: black !important; }
     </style>
 </head>
@@ -32,23 +33,31 @@
     </div>
 
     <div class="nav-tools">
-        <div class="btn-mariner" onclick="map.locate({setView: true})">🧭</div>
-        <div class="btn-mariner" onclick="toggleSatellite()" id="satBtn">🛰️</div>
-        <div class="btn-mariner" onclick="saveWaypoint()">📍</div>
+        <div class="btn-mariner" onclick="map.locate({setView: true, maxZoom: 16})">🧭</div>
+        <div class="btn-mariner" onclick="saveWaypoint()" title="حفظ نقطة صيد">📍</div>
+        <div class="btn-mariner" onclick="togglePath()" id="pathBtn" title="تتبع المسار">🧶</div>
+        <div class="btn-mariner" onclick="toggleSatellite()" id="satBtn" title="تبديل القمر الصناعي">🛰️</div>
+        <div class="btn-mariner" onclick="clearAllData()" style="border-color: var(--danger)" title="مسح البيانات">🗑️</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 18 }).setView([21.45, 39.12], 12);
         
-        // 1. طبقة الأعماق الهيدروغرافية (مثل الصورة المطلوبة)
+        // --- الطبقات الملاحية (Base Layers) ---
         const oceanBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
-        
-        // 2. طبقة المسميات الملاحية والرموز
         const oceanLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
-
-        // 3. طبقة الساتلايت (لتبديل الأوضاع)
         const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 });
+
+        // --- نظام التخزين والملاحة ---
+        let currentPos = null;
+        let isTracking = false;
+        let pathArray = JSON.parse(localStorage.getItem('zan_path')) || [];
+        let waypoints = JSON.parse(localStorage.getItem('zan_points')) || [];
+        let polyline = L.polyline(pathArray, {color: '#ffff00', weight: 4, dashArray: '5, 10'}).addTo(map);
+
+        // تحميل النقاط من الذاكرة
+        waypoints.forEach(p => L.marker([p.lat, p.lng]).addTo(map).bindPopup(p.name));
 
         function toggleSatellite() {
             if (map.hasLayer(satellite)) {
@@ -60,19 +69,48 @@
             }
         }
 
-        function saveWaypoint() {
-            map.locate({setView: false});
-            map.once('locationfound', (e) => {
-                L.marker(e.latlng).addTo(map).bindPopup("نقطة صيد").openPopup();
-                alert("تم حفظ الموقع الحالي");
-            });
+        function togglePath() {
+            isTracking = !isTracking;
+            document.getElementById('pathBtn').classList.toggle('active');
+            if(isTracking) alert("بدأ تتبع المسار الحي");
         }
 
+        function saveWaypoint() {
+            if(currentPos) {
+                let name = prompt("أدخل اسم الموقع (مثلاً: قطعة صيد):", "نقطة " + new Date().toLocaleTimeString());
+                if(name) {
+                    let point = {lat: currentPos.lat, lng: currentPos.lng, name: name};
+                    waypoints.push(point);
+                    localStorage.setItem('zan_points', JSON.stringify(waypoints));
+                    L.marker(currentPos).addTo(map).bindPopup(name).openPopup();
+                }
+            }
+        }
+
+        function clearAllData() {
+            if(confirm("هل أنت متأكد من مسح جميع النقاط والمسارات المحفوظة؟")) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // --- تحديث الموقع والسرعة ---
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
-            document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            currentPos = e.latlng;
+            document.getElementById('speed').innerText = (e.speed * 1.94384 || 0).toFixed(1);
             if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
-            document.getElementById('pos').innerText = e.lat.toFixed(4) + "," + e.lng.toFixed(4);
+            document.getElementById('pos').innerText = e.lat.toFixed(5) + "," + e.lng.toFixed(5);
+            
+            if(isTracking) {
+                pathArray.push([e.lat, e.lng]);
+                polyline.setLatLngs(pathArray);
+                localStorage.setItem('zan_path', JSON.stringify(pathArray));
+            }
+
+            if (!window.boatMarker) {
+                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 12, weight: 5}).addTo(map);
+            } else { window.boatMarker.setLatLng(e.latlng); }
         });
     </script>
 </body>
