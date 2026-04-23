@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V39 - NO ERROR</title>
+    <title>ZAN MARINE V40 - DEPTH NUMBERS</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --neon: #00f2ff; --bg: #000; }
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: #001529; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 3px solid var(--neon); backdrop-filter: blur(10px); }
+        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 3px solid var(--neon); }
         .data-cell { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
         .val { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
         .lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
@@ -31,7 +31,7 @@
 
     <div class="nav-tools">
         <div class="btn-mariner" onclick="map.locate({setView: true})">🧭</div>
-        <div class="btn-mariner" onclick="toggleHybrid()" id="modeBtn">🛰️</div>
+        <div class="btn-mariner" onclick="toggleDepth()" id="modeBtn">📏</div>
         <div class="btn-mariner" onclick="location.reload()">🔄</div>
     </div>
 
@@ -39,28 +39,34 @@
     <script>
         const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([21.45, 39.12], 13);
         
-        // طبقة القمر الصناعي (التي لا تخطئ أبداً)
+        // 1. طبقة القمر الصناعي الأساسية
         const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22 });
         
-        // طبقة رادار الأعماق (التي تسبب الرسالة أحياناً)
-        const oceanRelief = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 });
+        // 2. طبقة أرقام الأعماق والتخطيط الملاحي (Esri Ocean)
+        const depthData = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 13,
+            opacity: 1 // تظهر الأرقام والخطوط بوضوح
+        });
 
-        // طبقة المسميات والأعماق (تعمل فوق الاثنين)
-        const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20, opacity: 0.8 });
+        // 3. طبقة المسميات الملاحية (تعمل فوق كل شيء)
+        const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20 });
 
-        // تفعيل الوضع الهجين افتراضياً لمنع رسالة الخطأ
+        // تفعيل وضع القمر الصناعي مع الأسماء افتراضياً
         satellite.addTo(map);
         labels.addTo(map);
 
-        function toggleHybrid() {
+        // وظيفة التبديل لإظهار أرقام الأعماق بشكل كامل
+        function toggleDepth() {
             if (map.hasLayer(satellite)) {
                 map.removeLayer(satellite);
-                oceanRelief.addTo(map);
-                document.getElementById('modeBtn').innerText = "🌊";
+                depthData.addTo(map);
+                document.getElementById('modeBtn').style.color = '#00f2ff';
+                alert("تم تفعيل وضع أرقام الأعماق");
             } else {
-                map.removeLayer(oceanRelief);
+                map.removeLayer(depthData);
                 satellite.addTo(map);
-                document.getElementById('modeBtn').innerText = "🛰️";
+                document.getElementById('modeBtn').style.color = 'white';
+                alert("تم العودة لوضع القمر الصناعي");
             }
         }
 
@@ -69,6 +75,7 @@
             document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
             if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
             document.getElementById('pos').innerText = e.lat.toFixed(5) + " , " + e.lng.toFixed(5);
+            
             if (!window.boatMarker) {
                 window.boatMarker = L.circleMarker(e.latlng, {color: '#00f2ff', radius: 10, fillOpacity: 0.8}).addTo(map);
             } else { window.boatMarker.setLatLng(e.latlng); }
