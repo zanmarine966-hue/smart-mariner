@@ -3,74 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE VECTOR V37</title>
+    <title>ZAN SMART MARINER V38</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #b5d0d0; } /* لون الخلفية يشبه الخرائط الملاحية */
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: #aad3df !important; }
+        :root { --neon: #00f2ff; --bg: #000b14; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: #001529; }
         
-        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 15, 30, 0.9); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); }
-        .data-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
-        .v-data { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
-        .v-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
+        /* شريط المعلومات المطور */
+        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 3px solid var(--neon); backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(0,242,255,0.4); }
+        .data-cell { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
+        .val { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; color: white; text-shadow: 0 0 5px var(--neon); }
+        .lbl { font-size: 9px; color: var(--neon); font-weight: bold; text-transform: uppercase; }
 
-        .btn-stack { position: absolute; right: 15px; top: 95px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
-        .m-btn { width: 55px; height: 55px; background: white; border: 2px solid #005; border-radius: 12px; color: #005; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        /* أزرار التحكم الملاحية */
+        .nav-tools { position: absolute; right: 15px; top: 100px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .btn-mariner { width: 55px; height: 55px; background: rgba(0, 11, 20, 0.9); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.8); transition: 0.3s; }
+        .btn-mariner:active { transform: scale(0.9); background: var(--neon); color: #000; }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
 
-    <div class="nav-hud">
-        <div class="data-item"><span class="v-lbl">SOG السرعة</span><span class="v-data" id="spd">0.0</span></div>
-        <div class="data-item"><span class="v-lbl">COG الاتجاه</span><span class="v-data" id="cog">--</span></div>
-        <div class="data-item"><span class="v-lbl">GPS الإحداثيات</span><span class="v-data" id="pos" style="font-size: 10px;">...</span></div>
+    <div class="mariner-hud">
+        <div class="data-cell"><span class="lbl">SOG السرعة (عقدة)</span><span class="val" id="speed">0.0</span></div>
+        <div class="data-cell"><span class="lbl">COG الاتجاه</span><span class="val" id="cog">115°</span></div>
+        <div class="data-cell"><span class="lbl">GPS الإحداثيات</span><span class="val" id="pos" style="font-size: 10px;">بانتظار الإشارة...</span></div>
     </div>
 
-    <div class="btn-stack">
-        <div class="m-btn" onclick="map.locate({setView: true})">🧭</div>
-        <div class="m-btn" onclick="location.reload()">🔄</div>
+    <div class="nav-tools">
+        <div class="btn-mariner" onclick="map.locate({setView: true, maxZoom: 16})">🧭</div>
+        <div class="btn-mariner" onclick="toggleTrace()" title="تتبع المسار">✏️</div>
+        <div class="btn-mariner" onclick="toggleMarineRelief()" title="رادار الأعماق">🌊</div>
+        <div class="btn-mariner" onclick="location.reload()">🔄</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة مع سقف تكبير ملاحي واقعي
+        // إعداد الخريطة بأعلى سقف تكبير (Zoom 22) لمنع الانقطاع
         const map = L.map('map', { 
             zoomControl: false, 
             attributionControl: false,
-            maxZoom: 18 
+            maxZoom: 22 
         }).setView([21.45, 39.12], 13);
         
-        // 1. القاعدة التخطيطية الزرقاء (World Ocean Base) - التخطيط الذي تحبه
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 13 // السيرفر التخطيطي يتوقف هنا
+        // الطبقة 1 (الأساسية): قمر صناعي عالي الدقة (Esri World Imagery)
+        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 22
         }).addTo(map);
         
-        // 2. طبقة المسميات والأعماق (Ocean Reference)
-        // تبرز أسماء مثل "Shi'b Jahan" و "North Gateway" بوضوح
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 18
+        // الطبقة 2: مسميات وأعماق ملاحية شفافة (تظهر بوضوح فوق القمر الصناعي)
+        const marineLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 20,
+            opacity: 0.85 
         }).addTo(map);
 
-        // 3. طبقة العلامات البحرية (OpenSeaMap) - تضع البوويات والمنارات فوق التخطيط
-        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
-            maxZoom: 18
-        }).addTo(map);
-
+        // نظام التتبع والملاحة
         map.locate({watch: true, enableHighAccuracy: true});
+        
+        let polyline;
         map.on('locationfound', (e) => {
-            document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            const speedKnot = (e.speed * 1.94384) || 0;
+            document.getElementById('speed').innerText = speedKnot.toFixed(1);
             if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
-            document.getElementById('pos').innerText = e.lat.toFixed(5) + "," + e.lng.toFixed(5);
+            document.getElementById('pos').innerText = e.lat.toFixed(5) + " , " + e.lng.toFixed(5);
             
             if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {color: 'red', radius: 8, fillOpacity: 1}).addTo(map);
+                // أيقونة قارب ملاحية مضيئة (Pulse Effect)
+                window.boatMarker = L.circleMarker(e.latlng, {
+                    color: '#00f2ff', radius: 10, fillOpacity: 1, weight: 4, stroke: true
+                }).addTo(map);
             } else {
                 window.boatMarker.setLatLng(e.latlng);
             }
+            
+            // إضافة نقطة للمسار
+            if (polyline) polyline.addLatLng(e.latlng);
         });
+
+        // تشغيل/إيقاف حفظ المسار
+        function toggleTrace() {
+            if (!polyline) {
+                polyline = L.polyline([], {color: '#00f2ff', weight: 4, opacity: 0.8}).addTo(map);
+                alert("بدأ تسجيل المسار (Trace ON)");
+            } else {
+                map.removeLayer(polyline);
+                polyline = null;
+                alert("تم إيقاف تسجيل المسار وحذفه");
+            }
+        }
+
+        // تبديل بين رؤية الأعماق والقمر الصناعي
+        function toggleMarineRelief() {
+            if (map.hasLayer(satLayer)) {
+                map.removeLayer(satLayer);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
+                alert("وضع رادار الأعماق (Ocean Relief)");
+            } else {
+                location.reload();
+            }
+        }
     </script>
 </body>
 </html>
