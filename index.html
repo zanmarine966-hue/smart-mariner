@@ -3,22 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE ULTIMATE V36</title>
+    <title>ZAN MARINE VECTOR V37</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #000a14; }
+        :root { --neon: #00f2ff; --bg: #b5d0d0; } /* لون الخلفية يشبه الخرائط الملاحية */
         body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: #001529; }
+        #map { height: 100vh; width: 100vw; z-index: 1; background: #aad3df !important; }
         
-        /* شريط المعلومات الملاحي */
-        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 10, 20, 0.9); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); backdrop-filter: blur(8px); }
-        .data-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.1); }
-        .v-data { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; color: white; }
+        .nav-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 15, 30, 0.9); display: flex; padding: 12px 0; border-bottom: 2px solid var(--neon); }
+        .data-item { flex: 1; text-align: center; color: white; border-left: 1px solid rgba(0, 242, 255, 0.2); }
+        .v-data { display: block; font-size: 1.5rem; font-weight: bold; font-family: monospace; }
         .v-lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
 
-        /* أزرار التحكم الجانبية */
         .btn-stack { position: absolute; right: 15px; top: 95px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
-        .m-btn { width: 55px; height: 55px; background: rgba(0, 10, 20, 0.85); border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
+        .m-btn { width: 55px; height: 55px; background: white; border: 2px solid #005; border-radius: 12px; color: #005; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
@@ -26,51 +24,49 @@
     <div id="map"></div>
 
     <div class="nav-hud">
-        <div class="data-item"><span class="v-lbl">SOG السرعة (عقدة)</span><span class="v-data" id="spd">0.0</span></div>
+        <div class="data-item"><span class="v-lbl">SOG السرعة</span><span class="v-data" id="spd">0.0</span></div>
         <div class="data-item"><span class="v-lbl">COG الاتجاه</span><span class="v-data" id="cog">--</span></div>
-        <div class="data-item"><span class="v-lbl">GPS الإحداثيات</span><span class="v-data" id="pos" style="font-size: 10px;">بانتظار الإشارة...</span></div>
+        <div class="data-item"><span class="v-lbl">GPS الإحداثيات</span><span class="v-data" id="pos" style="font-size: 10px;">...</span></div>
     </div>
 
     <div class="btn-stack">
-        <div class="m-btn" onclick="map.locate({setView: true, maxZoom: 16})">🧭</div>
+        <div class="m-btn" onclick="map.locate({setView: true})">🧭</div>
         <div class="m-btn" onclick="location.reload()">🔄</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // إعداد الخريطة بأعلى سقف تكبير (Zoom 22) لمنع الانقطاع
+        // إعداد الخريطة مع سقف تكبير ملاحي واقعي
         const map = L.map('map', { 
             zoomControl: false, 
             attributionControl: false,
-            maxZoom: 22 
+            maxZoom: 18 
         }).setView([21.45, 39.12], 13);
         
-        // 1. طبقة الأقمار الصناعية الأساسية (التي لا تختفي أبداً)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 22
+        // 1. القاعدة التخطيطية الزرقاء (World Ocean Base) - التخطيط الذي تحبه
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 13 // السيرفر التخطيطي يتوقف هنا
         }).addTo(map);
         
-        // 2. طبقة المسميات والأعماق الشفافة (تظهر فوق القمر الصناعي)
+        // 2. طبقة المسميات والأعماق (Ocean Reference)
+        // تبرز أسماء مثل "Shi'b Jahan" و "North Gateway" بوضوح
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 20,
-            opacity: 0.85 
+            maxZoom: 18
         }).addTo(map);
 
-        // نظام التتبع المباشر
+        // 3. طبقة العلامات البحرية (OpenSeaMap) - تضع البوويات والمنارات فوق التخطيط
+        L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+            maxZoom: 18
+        }).addTo(map);
+
         map.locate({watch: true, enableHighAccuracy: true});
-        
         map.on('locationfound', (e) => {
-            const speedKnot = (e.speed * 1.94384) || 0;
-            document.getElementById('spd').innerText = speedKnot.toFixed(1);
-            if(e.heading !== undefined && e.heading !== null) {
-                document.getElementById('cog').innerText = Math.round(e.heading) + '°';
-            }
-            document.getElementById('pos').innerText = e.lat.toFixed(5) + " , " + e.lng.toFixed(5);
+            document.getElementById('spd').innerText = (e.speed * 1.94 || 0).toFixed(1);
+            if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
+            document.getElementById('pos').innerText = e.lat.toFixed(5) + "," + e.lng.toFixed(5);
             
             if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {
-                    color: '#00f2ff', radius: 10, fillOpacity: 0.8, weight: 3
-                }).addTo(map);
+                window.boatMarker = L.circleMarker(e.latlng, {color: 'red', radius: 8, fillOpacity: 1}).addTo(map);
             } else {
                 window.boatMarker.setLatLng(e.latlng);
             }
