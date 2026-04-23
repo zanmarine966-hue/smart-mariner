@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V45 - HIGH VISIBILITY</title>
+    <title>ZAN MARINE V46 - ULTRA CLEAR</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #000b14; }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: 'Arial', sans-serif; }
-        #map { height: 100vh; width: 100vw; z-index: 1; background: #001529; }
+        :root { --neon: #00f2ff; --bg: #000; }
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Arial', sans-serif; }
+        #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        /* شريط البيانات فائق الوضوح */
-        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0, 11, 20, 0.95); display: flex; padding: 15px 0; border-bottom: 4px solid var(--neon); backdrop-filter: blur(10px); }
-        .data-cell { flex: 1; text-align: center; color: white; border-left: 2px solid rgba(0, 242, 255, 0.3); }
-        .val { display: block; font-size: 2rem; font-weight: 900; font-family: 'monospace'; color: #fff; text-shadow: 0 0 10px var(--neon); line-height: 1; }
-        .lbl { font-size: 11px; color: var(--neon); font-weight: bold; margin-bottom: 5px; display: block; }
+        /* شريط البيانات بتباين فائق */
+        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: #000; display: flex; padding: 15px 0; border-bottom: 4px solid var(--neon); }
+        .data-cell { flex: 1; text-align: center; border-left: 2px solid #333; }
+        .val { display: block; font-size: 2.2rem; font-weight: 900; color: #fff; text-shadow: 2px 2px 0 #000; }
+        .lbl { font-size: 12px; color: var(--neon); font-weight: bold; display: block; margin-bottom: 2px; }
 
-        /* الأزرار الجانبية */
-        .nav-tools { position: absolute; right: 15px; top: 120px; z-index: 20; display: flex; flex-direction: column; gap: 20px; }
-        .btn-mariner { width: 65px; height: 65px; background: rgba(0, 15, 30, 0.95); border: 3px solid var(--neon); border-radius: 15px; color: white; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; box-shadow: 0 5px 20px rgba(0,0,0,0.9); }
-        .active { background: var(--neon) !important; color: black !important; }
-
-        /* تعديل وضوح الأسماء على الخريطة */
-        .leaflet-tile-pane { filter: contrast(110%) brightness(95%); }
+        .nav-tools { position: absolute; right: 15px; top: 120px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
+        .btn-mariner { width: 65px; height: 65px; background: #111; border: 3px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 0 20px #000; }
+        
+        /* تعديل الخريطة برمجياً لتوضيح الأسماء */
+        .leaflet-tile-container { filter: brightness(1.1) contrast(1.2); }
+        .map-labels { filter: invert(1) grayscale(1) brightness(2); } /* جعل الأسماء بيضاء ساطعة */
     </style>
 </head>
 <body>
@@ -30,14 +29,14 @@
     <div id="map"></div>
 
     <div class="mariner-hud">
-        <div class="data-cell"><span class="lbl">عقدة SOG</span><span class="val" id="speed">0.0</span></div>
-        <div class="data-cell"><span class="lbl">السرعة COG</span><span class="val" id="cog">--</span></div>
-        <div class="data-cell"><span class="lbl">إحداثيات الموقع</span><span class="val" id="pos" style="font-size: 12px; font-weight: bold;">جاري البحث...</span></div>
+        <div class="data-cell"><span class="lbl">SOG السرعة</span><span class="val" id="speed">0.0</span></div>
+        <div class="data-cell"><span class="lbl">COG الاتجاه</span><span class="val" id="cog">--</span></div>
+        <div class="data-cell"><span class="lbl">موقعك الحالي</span><span class="val" id="pos" style="font-size: 13px;">...</span></div>
     </div>
 
     <div class="nav-tools">
         <div class="btn-mariner" onclick="map.locate({setView: true, maxZoom: 16})">🧭</div>
-        <div class="btn-mariner" onclick="toggleAdvancedDepth()" id="depthBtn">⚓</div>
+        <div class="btn-mariner" onclick="toggleHybrid()" id="modeBtn">⚓</div>
         <div class="btn-mariner" onclick="location.reload()">🔄</div>
     </div>
 
@@ -45,46 +44,36 @@
     <script>
         const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 20 }).setView([21.45, 39.12], 13);
         
-        // 1. الساتلايت (ثبات 100%)
-        const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20 }).addTo(map);
+        // طبقة الساتلايت (Base)
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20 }).addTo(map);
         
-        // 2. الأسماء العربية والأعماق (بوضوح مضاعف)
-        const marineLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { 
+        // طبقة الأسماء الملاحية (المعالجة بصرياً لتصبح بيضاء)
+        const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { 
             maxZoom: 20, 
-            opacity: 1,
-            zIndex: 1000 // لضمان ظهورها فوق كل شيء
+            className: 'map-labels' 
         }).addTo(map);
 
-        // 3. طبقة الأعماق الكنتورية
-        const depthOverlay = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 13,
-            opacity: 0.75 
-        });
+        // طبقة الأعماق (تظهر عند الضغط على المخطاف)
+        const depth = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13, opacity: 0.6 });
 
-        function toggleAdvancedDepth() {
-            const btn = document.getElementById('depthBtn');
-            if (map.hasLayer(depthOverlay)) {
-                map.removeLayer(depthOverlay);
-                btn.classList.remove('active');
+        function toggleHybrid() {
+            if (map.hasLayer(depth)) {
+                map.removeLayer(depth);
+                document.getElementById('modeBtn').style.background = "#111";
             } else {
-                depthOverlay.addTo(map);
-                btn.classList.add('active');
+                depth.addTo(map);
+                document.getElementById('modeBtn').style.background = "var(--neon)";
             }
         }
 
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
-            document.getElementById('speed').innerText = (e.speed * 1.94384 || 0).toFixed(1);
+            document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
             if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
-            document.getElementById('pos').innerText = e.lat.toFixed(5) + " , " + e.lng.toFixed(5);
-            
+            document.getElementById('pos').innerText = e.lat.toFixed(5) + "," + e.lng.toFixed(5);
             if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {
-                    color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 12, weight: 5
-                }).addTo(map);
-            } else {
-                window.boatMarker.setLatLng(e.latlng);
-            }
+                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 12, weight: 4}).addTo(map);
+            } else { window.boatMarker.setLatLng(e.latlng); }
         });
     </script>
 </body>
