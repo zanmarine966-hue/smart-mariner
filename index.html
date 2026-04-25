@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V57 - SOS PLUS</title>
+    <title>ZAN MARINE V58 - SOS FIXED</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --neon: #00f2ff; --danger: #ff3131; --bg: rgba(0,0,0,0.9); }
         body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
         #map { height: 100vh; width: 100vw; z-index: 1; }
         
-        /* شريط البيانات */
+        /* HUD العلوي */
         .hud-top { position: absolute; top: 0; width: 100%; z-index: 100; background: var(--bg); display: flex; padding: 10px 0; border-bottom: 2px solid var(--neon); }
         .data-box { flex: 1; text-align: center; color: white; }
         .v-val { display: block; font-size: 1.6rem; font-weight: bold; }
         .v-lbl { font-size: 10px; color: var(--neon); }
 
-        /* أزرار التحكم */
+        /* الأزرار الجانبية */
         .side-menu { position: absolute; right: 12px; top: 90px; z-index: 100; display: flex; flex-direction: column; gap: 12px; }
-        .m-btn { width: 60px; height: 60px; background: #111; border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; }
-        .btn-sos { background: var(--danger); border-color: #fff; animation: pulse 1.5s infinite; }
+        .m-btn { width: 60px; height: 60px; background: #111; border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .btn-sos { background: var(--danger); border-color: #fff; animation: pulse 1.5s infinite; font-weight: bold; font-size: 18px; }
         
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0px rgba(255, 49, 49, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(255, 49, 49, 0); } 100% { box-shadow: 0 0 0 0px rgba(255, 49, 49, 0); } }
 
-        /* نافذة الإعدادات */
-        .drawer { position: absolute; bottom: -400px; left: 0; width: 100%; background: var(--bg); z-index: 200; border-top: 3px solid var(--neon); transition: 0.4s; padding: 20px; color: white; border-radius: 20px 20px 0 0; }
+        /* نافذة الإعدادات السفلى */
+        .drawer { position: absolute; bottom: -400px; left: 0; width: 100%; background: var(--bg); z-index: 200; border-top: 3px solid var(--neon); transition: 0.4s; padding: 20px; color: white; border-radius: 20px 20px 0 0; box-sizing: border-box; }
         .drawer.open { bottom: 0; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1.1rem; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 1.2rem; background: #222; color: #fff; }
     </style>
 </head>
 <body>
@@ -34,24 +34,22 @@
     <div id="map"></div>
 
     <div class="hud-top">
-        <div class="data-box"><span class="v-lbl">SOG عقـدة</span><span class="v-val" id="speed">0.0</span></div>
-        <div class="data-box"><span class="v-lbl">GPS</span><span class="v-val" id="pos" style="font-size: 11px;">--</span></div>
+        <div class="data-box"><span class="v-lbl">عقـدة (SOG)</span><span class="v-val" id="speed">0.0</span></div>
+        <div class="data-box"><span class="v-lbl">الموقع الحالي</span><span class="v-val" id="pos" style="font-size: 11px;">جاري التحديد...</span></div>
     </div>
 
     <div class="side-menu">
-        <div class="m-btn btn-sos" onclick="openSOSOptions()">SOS</div>
+        <div class="m-btn btn-sos" onclick="triggerSOS()">SOS</div>
         <div class="m-btn" onclick="toggleSettings()">⚙️</div>
         <div class="m-btn" onclick="map.locate({setView: true})">🧭</div>
     </div>
 
     <div id="uiDrawer" class="drawer">
-        <div id="drawerContent">
-            <h3>إعدادات الطوارئ</h3>
-            <label>رقم هاتف المستغيث به:</label>
-            <input type="tel" id="emergencyPhone" placeholder="مثال: 96650xxxxxxx" value="">
-            <p style="font-size: 12px; color: #aaa;">* يرجى كتابة الرقم الدولي بدون أصفار (مثلاً 966)</p>
-            <button onclick="saveSettings()" style="width:100%; padding:15px; background:var(--neon); border:none; border-radius:10px; font-weight:bold;">حفظ الرقم</button>
-        </div>
+        <h3>إعدادات الطوارئ</h3>
+        <label>رقم الطوارئ (مثال: 96650XXXXXXX):</label>
+        <input type="tel" id="emergencyPhone" placeholder="9665XXXXXXXX">
+        <button onclick="saveSettings()" style="width:100%; padding:15px; background:var(--neon); border:none; border-radius:10px; font-weight:bold; margin-top:10px;">حفظ الرقم</button>
+        <button onclick="toggleSettings()" style="width:100%; padding:10px; background:transparent; color:#aaa; border:none; margin-top:5px;">إلغاء</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -61,7 +59,6 @@
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 13 }).addTo(map);
 
         let currentLatLng = null;
-        // استعادة الرقم المحفوظ
         document.getElementById('emergencyPhone').value = localStorage.getItem('emergency_num') || "";
 
         function toggleSettings() {
@@ -69,28 +66,24 @@
         }
 
         function saveSettings() {
-            const num = document.getElementById('emergencyPhone').value;
+            const num = document.getElementById('emergencyPhone').value.replace(/\s+/g, '');
             localStorage.setItem('emergency_num', num);
-            alert("تم حفظ رقم الطوارئ بنجاح");
+            alert("تم حفظ رقم الطوارئ: " + num);
             toggleSettings();
         }
 
-        function openSOSOptions() {
-            if(!currentLatLng) { alert("جاري تحديد موقعك..."); return; }
+        function triggerSOS() {
+            if(!currentLatLng) { alert("عذراً، لم يتم تحديد موقعك بدقة حتى الآن. تأكد من تفعيل GPS."); return; }
             const phone = localStorage.getItem('emergency_num');
-            if(!phone) { alert("يرجى ضبط رقم الطوارئ من الإعدادات ⚙️ أولاً"); toggleSettings(); return; }
+            if(!phone) { alert("يرجى ضبط رقم الطوارئ أولاً من الإعدادات ⚙️"); toggleSettings(); return; }
 
-            const lat = currentLatLng.lat.toFixed(5);
-            const lng = currentLatLng.lng.toFixed(5);
+            const lat = currentLatLng.lat.toFixed(6);
+            const lng = currentLatLng.lng.toFixed(6);
             const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
-            const message = `نداء استغاثة SOS من ZAN MARINE!%0Aموقعي الحالي: ${lat}, ${lng}%0Aرابط الموقع:%0A${googleMapsUrl}`;
+            const message = encodeURIComponent(`نداء استغاثة SOS من ZAN MARINE!\nموقعي: ${lat}, ${lng}\nالرابط:\n${googleMapsUrl}`);
 
-            const action = confirm("اختر وسيلة الاستغاثة:\nموافق لـ WhatsApp\nإلغاء لـ رسالة نصية SMS");
-            
-            if(action) {
-                window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
-            } else {
-                window.open(`sms:${phone}?body=${message}`, '_blank');
+            if(confirm("إرسال نداء استغاثة إلى " + phone + "؟\n(سيتم فتح واتساب)")) {
+                window.location.href = `https://api.whatsapp.com/send?phone=${phone}&text=${message}`;
             }
         }
 
@@ -98,10 +91,15 @@
         map.on('locationfound', (e) => {
             currentLatLng = e.latlng;
             document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
-            document.getElementById('pos').innerText = e.lat.toFixed(4) + "," + e.lng.toFixed(4);
+            document.getElementById('pos').innerText = e.lat.toFixed(5) + "," + e.lng.toFixed(5);
+            
             if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 11, weight: 4}).addTo(map);
+                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 12, weight: 5}).addTo(map);
             } else { window.boatMarker.setLatLng(e.latlng); }
+        });
+
+        map.on('locationerror', () => {
+            document.getElementById('pos').innerText = "خطأ في تحديد الموقع";
         });
     </script>
 </body>
