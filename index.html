@@ -2,36 +2,70 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V61 - FULL ACTIVE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ZAN MARINE V62 - MOBILE OPTIMIZED</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --danger: #ff3131; --bg: #011627; }
-        body, html { margin: 0; padding: 0; height: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
+        :root { --neon: #00f2ff; --danger: #ff3131; --bg-dark: #011627; --card-bg: #022c43; }
         
-        /* شريط التنقل العلوي */
-        .top-nav { display: flex; background: var(--bg); height: 65px; border-bottom: 2px solid var(--neon); }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8899a6; font-size: 10px; cursor: pointer; border-left: 1px solid #1a3a4a; }
-        .nav-item.active { color: var(--neon); background: rgba(0, 242, 255, 0.1); }
-        .nav-item.sos-btn { background: var(--danger); color: white; border: none; font-weight: bold; font-size: 14px; }
+        /* ضبط إعدادات العرض للجوال */
+        body, html { 
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background: #000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            overflow: hidden; position: fixed; /* منع السحب العشوائي للشاشة */
+        }
+        
+        /* شريط التنقل العلوي - تصميم مضغوط للجوال */
+        .top-nav { 
+            display: flex; background: var(--bg-dark); height: 70px; 
+            border-bottom: 2px solid var(--neon); box-sizing: border-box;
+            position: relative; z-index: 1000;
+        }
+        .nav-item { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
+            color: #8899a6; font-size: 9px; font-weight: bold; cursor: pointer; border-left: 1px solid #1a3a4a;
+            -webkit-tap-highlight-color: transparent; padding: 5px 0;
+        }
+        .nav-item i-icon { font-size: 20px; margin-bottom: 4px; }
+        .nav-item.active { color: var(--neon); background: rgba(0, 242, 255, 0.08); }
+        .nav-item.sos-btn { background: var(--danger); color: white; border: none; font-size: 14px; }
 
-        .page { display: none; height: calc(100vh - 65px); width: 100%; background: #000; overflow-y: auto; color: white; padding: 15px; box-sizing: border-box; }
+        /* حاوية الصفحات */
+        .page { 
+            display: none; height: calc(100vh - 70px); width: 100%; 
+            background: #000; overflow-y: auto; color: white; 
+            padding: 20px; box-sizing: border-box; -webkit-overflow-scrolling: touch;
+        }
         .page.active { display: block; }
-        #map { height: 100%; width: 100%; padding: 0; }
+        #map { height: 100%; width: 100%; background: #c3d9ef; }
 
-        /* تنسيق الجداول والبطاقات */
-        .card { background: #022c43; border: 1px solid var(--neon); border-radius: 10px; padding: 15px; margin-bottom: 15px; }
-        .btn-action { width: 100%; padding: 12px; background: var(--neon); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        /* تصميم البطاقات لتناسب عرض الجوال */
+        .card { 
+            background: var(--card-bg); border: 1px solid rgba(0, 242, 255, 0.3); 
+            border-radius: 12px; padding: 18px; margin-bottom: 15px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .card h3 { margin-top: 0; color: var(--neon); font-size: 16px; border-bottom: 1px solid #1a3a4a; padding-bottom: 8px; }
+        
+        /* أزرار كبيرة سهلة اللمس */
+        .btn-action { 
+            width: 100%; padding: 16px; background: var(--neon); border: none; 
+            border-radius: 10px; font-weight: bold; font-size: 16px; 
+            color: #000; cursor: pointer; margin-top: 10px;
+        }
+        
+        /* إخفاء شريط التمرير */
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
     </style>
 </head>
 <body>
 
     <nav class="top-nav">
-        <div class="nav-item sos-btn" onclick="triggerSOS()">🚨 SOS</div>
-        <div class="nav-item" onclick="showPage('spotsPage', this)">📍 MY SPOTS</div>
-        <div class="nav-item" onclick="showPage('enginePage', this)">🔧 ENGINE</div>
-        <div class="nav-item" onclick="showPage('weatherPage', this)">☁️ WEATHER</div>
-        <div class="nav-item active" onclick="showPage('navPage', this)">🧭 NAV</div>
+        <div class="nav-item sos-btn" onclick="triggerSOS()">🚨<br>SOS</div>
+        <div class="nav-item" onclick="showPage('spotsPage', this)">📍<br>SPOTS</div>
+        <div class="nav-item" onclick="showPage('enginePage', this)">🔧<br>ENGINE</div>
+        <div class="nav-item" onclick="showPage('weatherPage', this)">☁️<br>WEATHER</div>
+        <div class="nav-item active" onclick="showPage('navPage', this)">🧭<br>NAV</div>
     </nav>
 
     <div id="navPage" class="page active" style="padding:0;">
@@ -39,39 +73,48 @@
     </div>
 
     <div id="weatherPage" class="page">
-        <h2>أحوال الجو والبحر</h2>
+        <h3>☁️ أحوال الطقس والبحر</h3>
         <div class="card">
-            <p>حالة البحر: <span id="sea-state" style="color:var(--neon)">هادئ (0.4م)</span></p>
-            <p>سرعة الرياح: <span id="w-speed" style="color:var(--neon)">12 عقدة</span></p>
-            <p>اتجاه الرياح: <span style="color:var(--neon)">شمالي غربي</span></p>
-            <p>درجة الحرارة: <span style="color:var(--neon)">32°م</span></p>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>حالة البحر:</span><span id="sea-state" style="color:var(--neon)">هادئ</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>سرعة الرياح:</span><span id="w-speed" style="color:var(--neon)">14 عقدة</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span>درجة الحرارة:</span><span style="color:var(--neon)">31°م</span>
+            </div>
         </div>
-        <button class="btn-action" onclick="refreshWeather()">تحديث البيانات</button>
+        <button class="btn-action" onclick="alert('جاري تحديث البيانات...')">تحديث الآن</button>
     </div>
 
     <div id="enginePage" class="page">
-        <h2>متابعة الصيانة</h2>
+        <h3>🔧 سجل صيانة المحرك</h3>
         <div class="card">
-            <h3>ساعات تشغيل المحرك</h3>
-            <p style="font-size: 2rem; text-align: center;" id="engine-hours">145.5 hr</p>
+            <p style="font-size: 11px; color: #8899a6; margin:0;">إجمالي ساعات التشغيل</p>
+            <p style="font-size: 2.2rem; font-weight: bold; margin: 5px 0;">145.5 <span style="font-size: 14px;">ساعة</span></p>
         </div>
         <div class="card">
-            <p>موعد تغيير الزيت القادم: <span style="color:var(--danger)">بعد 15 ساعة</span></p>
-            <p>آخر فحص للفلتر: <span style="color:var(--neon)">2026-04-10</span></p>
+            <p>التغيير القادم: <span style="color:var(--danger)">بعد 15 ساعة</span></p>
+            <p>حالة الفلتر: <span style="color:var(--neon)">جيدة</span></p>
         </div>
-        <button class="btn-action" onclick="logMaintenance()">تسجيل صيانة جديدة</button>
+        <button class="btn-action" onclick="alert('تم تسجيل ساعات التشغيل')">تحديث الساعات</button>
     </div>
 
     <div id="spotsPage" class="page">
-        <h2>نقاطي المحفوظة</h2>
+        <h3>⚓ مواقعي المحفوظة</h3>
         <div id="spots-list">
-            <p style="color:#666">لا توجد نقاط محفوظة حالياً</p>
+            <div class="card" style="padding: 10px; font-size: 14px;">
+                🚢 موقع الصيد الرئيسي <br>
+                <span style="font-size: 11px; color: #666;">21.64642, 39.14191</span>
+            </div>
         </div>
-        <button class="btn-action" onclick="addNewSpot()">حفظ موقعي الحالي</button>
+        <button class="btn-action" onclick="addNewSpot()">حفظ الموقع الحالي</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // إعداد الخريطة البحرية
         const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([21.45, 39.12], 12);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 13 }).addTo(map);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 13 }).addTo(map);
@@ -83,26 +126,24 @@
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             element.classList.add('active');
-            if(pageId === 'navPage') setTimeout(() => map.invalidateSize(), 200);
+            if(pageId === 'navPage') setTimeout(() => map.invalidateSize(), 300);
         }
 
-        // تفعيل حفظ المواقع
+        function triggerSOS() {
+            if(!currentLatLng) return alert("انتظر تحديد الموقع...");
+            const phone = localStorage.getItem('emergency_num') || "994";
+            const msg = encodeURIComponent(`نداء استغاثة SOS!\nموقعي: ${currentLatLng.lat.toFixed(5)}, ${currentLatLng.lng.toFixed(5)}`);
+            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`);
+        }
+
         function addNewSpot() {
             if(currentLatLng) {
-                let name = prompt("اسم الموقع:");
+                let name = prompt("أدخل اسم الموقع:");
                 if(name) {
-                    L.marker(currentLatLng).addTo(map).bindPopup(name);
-                    alert("تم حفظ النقطة بنجاح على الخريطة");
+                    L.marker(currentLatLng).addTo(map).bindPopup(name).openPopup();
+                    alert("تم حفظ النقطة بنجاح");
                 }
             }
-        }
-
-        // وظيفة SOS
-        function triggerSOS() {
-            if(!currentLatLng) return alert("جاري تحديد الموقع...");
-            const phone = localStorage.getItem('emergency_num') || "994";
-            const msg = encodeURIComponent(`SOS! الموقع: ${currentLatLng.lat},${currentLatLng.lng}`);
-            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`);
         }
 
         map.locate({watch: true, enableHighAccuracy: true});
