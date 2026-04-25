@@ -3,78 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ZAN MARINE V63 - FIXED MOBILE</title>
+    <title>ZAN MARINE V64 - MY SPOTS ACTIVE</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --danger: #ff3131; --panel-bg: #011627; }
+        :root { --neon: #00f2ff; --danger: #ff3131; --bg: #011627; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
         
-        body, html { 
-            margin: 0; padding: 0; height: 100%; width: 100%;
-            background: #000; font-family: sans-serif; overflow: hidden;
-        }
-
-        /* شريط التنقل العلوي */
-        .top-nav { 
-            display: flex; background: var(--panel-bg); height: 60px; 
-            border-bottom: 2px solid var(--neon); z-index: 2000; position: relative;
-        }
-        .nav-item { 
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            color: #8899a6; font-size: 8px; font-weight: bold; cursor: pointer; border-left: 1px solid #1a3a4a;
-        }
+        /* التنقل العلوي */
+        .top-nav { display: flex; background: var(--bg); height: 65px; border-bottom: 2px solid var(--neon); z-index: 2000; position: relative; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8899a6; font-size: 9px; font-weight: bold; cursor: pointer; }
         .nav-item.active { color: var(--neon); background: rgba(0, 242, 255, 0.1); }
         .nav-item.sos-btn { background: var(--danger); color: white; border: none; font-size: 14px; }
 
-        /* حاوية الصفحات - ضبط الارتفاع التلقائي */
-        .page-container { height: calc(100% - 60px); width: 100%; position: relative; }
-        .page { display: none; height: 100%; width: 100%; overflow-y: auto; background: #000; color: white; box-sizing: border-box; padding: 15px; }
+        .page-container { height: calc(100% - 65px); width: 100%; position: relative; }
+        .page { display: none; height: 100%; width: 100%; overflow-y: auto; background: #000; color: white; padding: 15px; box-sizing: border-box; }
         .page.active { display: block; }
         
-        #map { height: 100%; width: 100%; z-index: 1; }
+        #map { height: 100%; width: 100%; }
 
-        /* تنسيق بطاقات البيانات للجوال */
-        .card { 
-            background: rgba(2, 44, 67, 0.9); border: 1px solid var(--neon); 
-            border-radius: 8px; padding: 15px; margin-bottom: 12px;
-        }
-        .data-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #112d42; }
+        /* تنسيق صفحة المواقع */
+        .card { background: #022c43; border: 1px solid var(--neon); border-radius: 10px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .spot-info { flex-grow: 1; }
+        .spot-name { font-weight: bold; color: var(--neon); display: block; margin-bottom: 4px; }
+        .spot-coords { font-size: 10px; color: #8899a6; font-family: monospace; }
+        .btn-go { background: var(--neon); border: none; padding: 8px 12px; border-radius: 5px; font-weight: bold; font-size: 12px; }
+        
+        .empty-state { text-align: center; color: #555; margin-top: 50px; }
     </style>
 </head>
 <body>
 
     <nav class="top-nav">
-        <div class="nav-item sos-btn" onclick="triggerSOS()">🚨 SOS</div>
-        <div class="nav-item" onclick="showPage('spotsPage', this)">📍 SPOTS</div>
-        <div class="nav-item active" onclick="showPage('navPage', this)">🧭 NAV</div>
+        <div class="nav-item sos-btn" onclick="triggerPanic()">🚨 SOS</div>
+        <div class="nav-item active" id="btn-nav" onclick="showPage('navPage', this)">🧭 NAV</div>
+        <div class="nav-item" id="btn-spots" onclick="showPage('spotsPage', this)">📍 MY SPOTS</div>
         <div class="nav-item" onclick="showPage('enginePage', this)">🔧 ENGINE</div>
         <div class="nav-item" onclick="showPage('weatherPage', this)">☁️ WEATHER</div>
     </nav>
 
     <div class="page-container">
-        <div id="navPage" class="page active" style="padding:0;">
-            <div id="map"></div>
+        <div id="navPage" class="page active" style="padding:0;"><div id="map"></div></div>
+
+        <div id="spotsPage" class="page">
+            <h3 style="border-bottom: 1px solid #1a3a4a; padding-bottom: 10px;">⚓ مواقعي البحرية</h3>
+            <button onclick="saveCurrentLocation()" style="width:100%; padding:15px; background:var(--neon); border:none; border-radius:8px; font-weight:bold; margin-bottom:20px; font-size:16px;">+ حفظ موقعي الحالي</button>
+            <div id="spots-list">
+                </div>
         </div>
 
         <div id="enginePage" class="page">
-            <h3>🔧 متابعة الصيانة</h3>
-            <div class="card">
-                <p style="font-size: 12px; color: var(--neon);">ساعات تشغيل المحرك</p>
-                <p style="font-size: 2.5rem; text-align: center; margin: 10px 0;">145.5 hr</p>
-            </div>
-            <div class="card">
-                <div class="data-row"><span>موعد الزيت القادم</span><span style="color:var(--danger)">بعد 15 ساعة</span></div>
-                <div class="data-row"><span>آخر فحص فلتر</span><span>2026-04-10</span></div>
-            </div>
-            <button style="width:100%; padding:15px; background:var(--neon); border:none; font-weight:bold; border-radius:8px;">تسجيل صيانة جديدة</button>
+            <h3>🔧 صيانة المحرك</h3>
+            <div class="card"><div class="spot-info"><span class="spot-name">ساعات التشغيل</span><span style="font-size:24px;">145.5 hr</span></div></div>
         </div>
 
         <div id="weatherPage" class="page">
-            <h3>☁️ حالة البحر والرياح</h3>
-            <div class="card">
-                <div class="data-row"><span>سرعة الرياح</span><span style="color:var(--neon)">14 عقدة NW</span></div>
-                <div class="data-row"><span>ارتفاع الموج</span><span>0.6 - 1.1 متر</span></div>
-                <div class="data-row"><span>الرؤية</span><span>ممتازة</span></div>
-            </div>
+            <h3>☁️ الطقس</h3>
+            <div class="card"><p>الرياح: 14 عقدة NW</p></div>
         </div>
     </div>
 
@@ -84,21 +68,69 @@
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
 
+        let currentLatLng = null;
+        let savedSpots = JSON.parse(localStorage.getItem('my_marine_spots')) || [];
+
         function showPage(pageId, element) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             element.classList.add('active');
             if(pageId === 'navPage') setTimeout(() => map.invalidateSize(), 300);
+            if(pageId === 'spotsPage') renderSpots();
         }
 
-        function triggerSOS() {
+        function saveCurrentLocation() {
+            if(!currentLatLng) return alert("جاري تحديد موقعك، انتظر لحظة...");
+            let name = prompt("أدخل اسماً لهذا الموقع (مثلاً: نقطة صيد الهامور):");
+            if(name) {
+                let spot = { id: Date.now(), name: name, lat: currentLatLng.lat, lng: currentLatLng.lng };
+                savedSpots.push(spot);
+                localStorage.setItem('my_marine_spots', JSON.stringify(savedSpots));
+                renderSpots();
+            }
+        }
+
+        function renderSpots() {
+            const list = document.getElementById('spots-list');
+            if(savedSpots.length === 0) {
+                list.innerHTML = '<div class="empty-state">لا توجد مواقع محفوظة بعد</div>';
+                return;
+            }
+            list.innerHTML = savedSpots.map(s => `
+                <div class="card">
+                    <div class="spot-info">
+                        <span class="spot-name">${s.name}</span>
+                        <span class="spot-coords">${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}</span>
+                    </div>
+                    <button class="btn-go" onclick="goToSpot(${s.lat}, ${s.lng})">إظهار</button>
+                    <button onclick="deleteSpot(${s.id})" style="background:transparent; border:none; color:var(--danger); margin-right:10px;">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function goToSpot(lat, lng) {
+            showPage('navPage', document.getElementById('btn-nav'));
+            map.setView([lat, lng], 15);
+            L.marker([lat, lng]).addTo(map).bindPopup("الموقع المحفوظ").openPopup();
+        }
+
+        function deleteSpot(id) {
+            if(confirm("هل تريد حذف هذا الموقع؟")) {
+                savedSpots = savedSpots.filter(s => s.id !== id);
+                localStorage.setItem('my_marine_spots', JSON.stringify(savedSpots));
+                renderSpots();
+            }
+        }
+
+        function triggerPanic() {
             const phone = localStorage.getItem('emergency_num') || "994";
             window.open(`https://api.whatsapp.com/send?phone=${phone}&text=استغاثة_SOS`, '_blank');
         }
 
-        map.locate({watch: true, setView: true, maxZoom: 16});
+        map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
+            currentLatLng = e.latlng;
             if (!window.boatMarker) {
                 window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 10}).addTo(map);
             } else { window.boatMarker.setLatLng(e.latlng); }
