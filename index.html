@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ZAN MARINE V65 - SETTINGS</title>
+    <title>ZAN MARINE V66 - DETAIL FIXED</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --neon: #00f2ff; --danger: #ff3131; --bg: #011627; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; font-family: sans-serif; overflow: hidden; transition: 0.3s; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
         
         .top-nav { display: flex; background: var(--bg); height: 65px; border-bottom: 2px solid var(--neon); z-index: 2000; position: relative; }
         .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8899a6; font-size: 9px; font-weight: bold; cursor: pointer; }
@@ -18,14 +18,12 @@
         .page { display: none; height: 100%; width: 100%; overflow-y: auto; background: #000; color: white; padding: 15px; box-sizing: border-box; }
         .page.active { display: block; }
         
-        #map { height: 100%; width: 100%; }
+        #map { height: 100%; width: 100%; background: #011627; }
         .card { background: #022c43; border: 1px solid var(--neon); border-radius: 10px; padding: 15px; margin-bottom: 12px; }
-        
-        select, input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid var(--neon); background: #000; color: white; font-size: 16px; }
-        .setting-label { display: block; margin-top: 15px; color: var(--neon); font-size: 14px; }
+        select { width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--neon); border-radius: 8px; }
     </style>
 </head>
-<body id="appBody">
+<body>
 
     <nav class="top-nav">
         <div class="nav-item sos-btn" onclick="triggerSOS()">🚨 SOS</div>
@@ -40,42 +38,46 @@
         <div id="navPage" class="page active" style="padding:0;"><div id="map"></div></div>
 
         <div id="settingsPage" class="page">
-            <h2 data-key="settings_title">الإعدادات / Settings</h2>
-            
+            <h2 data-key="settings_title">الإعدادات</h2>
             <div class="card">
-                <span class="setting-label" data-key="lang_label">اللغة / Language</span>
+                <label data-key="lang_label">اللغة</label>
                 <select id="langSelect" onchange="updateLanguage()">
                     <option value="ar">العربية</option>
                     <option value="en">English</option>
                 </select>
-
-                <span class="setting-label" data-key="unit_label">نظام القياس / Units</span>
+                <br><br>
+                <label data-key="unit_label">نظام القياس</label>
                 <select id="unitSelect" onchange="updateUnits()">
-                    <option value="metric">متري (متر - كم/س)</option>
-                    <option value="nautical">بحري (قدم - عقدة)</option>
+                    <option value="nautical">بحري (عقدة/قدم)</option>
+                    <option value="metric">متري (كم/متر)</option>
                 </select>
-            </div>
-            
-            <div class="card">
-                <span class="setting-label" data-key="sos_num_label">رقم الطوارئ</span>
-                <input type="tel" id="sosNum" placeholder="9665xxxxxxxx" onchange="localStorage.setItem('sos_num', this.value)">
             </div>
         </div>
 
         <div id="spotsPage" class="page"><h3 data-key="spots_title">مواقعي</h3><div id="spots-list"></div></div>
-        <div id="enginePage" class="page"><h3 data-key="engine_title">المحرك</h3><div class="card"><p id="engine-txt">145.5 ساعة</p></div></div>
-        <div id="weatherPage" class="page"><h3 data-key="weather_title">الطقس</h3><div class="card"><p id="wind-txt">14 عقدة</p></div></div>
+        <div id="enginePage" class="page"><h3 data-key="engine_title">المحرك</h3><div class="card"><p id="engine-txt">145.5 hr</p></div></div>
+        <div id="weatherPage" class="page"><h3 data-key="weather_title">الطقس</h3><div class="card"><p id="wind-txt">14 Knot</p></div></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const i18n = {
-            ar: { nav: "🧭 ملاحة", spots: "📍 مواقعي", engine: "🔧 محرك", weather: "☁️ طقس", settings: "⚙️ ضبط", settings_title: "إعدادات النظام", lang_label: "اللغة", unit_label: "وحدات القياس", sos_num_label: "رقم الطوارئ", spots_title: "نقاط الصيد المحفوظة" },
-            en: { nav: "🧭 NAV", spots: "📍 SPOTS", engine: "🔧 ENGINE", weather: "☁️ WEATHER", settings: "⚙️ SETTINGS", settings_title: "System Settings", lang_label: "Language", unit_label: "Unit System", sos_num_label: "Emergency Number", spots_title: "Saved Fishing Spots" }
+            ar: { nav: "🧭 ملاحة", spots: "📍 مواقعي", engine: "🔧 محرك", weather: "☁️ طقس", settings: "⚙️ ضبط", settings_title: "إعدادات النظام", lang_label: "اللغة", unit_label: "نظام القياس", spots_title: "مواقعي المحفوظة" },
+            en: { nav: "🧭 NAV", spots: "📍 SPOTS", engine: "🔧 ENGINE", weather: "☁️ WEATHER", settings: "⚙️ SETTINGS", settings_title: "Settings", lang_label: "Language", unit_label: "Units", spots_title: "Saved Spots" }
         };
 
-        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
+        // إصلاح الطبقات لظهور الأسماء والأعماق
+        const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([21.45, 39.12], 12);
+        
+        const baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 13, // أقصى زوم للطبقة الأساسية
+            maxNativeZoom: 13
+        }).addTo(map);
+
+        const refLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 22, // طبقة الأسماء والأعماق تدعم زوم أعلى
+            maxNativeZoom: 13
+        }).addTo(map);
 
         function showPage(pageId, element) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -90,35 +92,29 @@
             localStorage.setItem('app_lang', lang);
             document.dir = lang === 'ar' ? 'rtl' : 'ltr';
             document.querySelectorAll('[data-key]').forEach(el => {
-                const key = el.getAttribute('data-key');
-                el.innerText = i18n[lang][key];
+                el.innerText = i18n[lang][el.getAttribute('data-key')];
             });
         }
 
         function updateUnits() {
             const unit = document.getElementById('unitSelect').value;
             localStorage.setItem('app_units', unit);
-            const speed = unit === 'nautical' ? "14 Knot" : "26 Km/h";
-            document.getElementById('wind-txt').innerText = speed;
+            document.getElementById('wind-txt').innerText = unit === 'nautical' ? "14 Knot" : "26 Km/h";
         }
 
-        // استعادة التفضيلات عند التشغيل
         window.onload = () => {
-            const savedLang = localStorage.getItem('app_lang') || 'ar';
-            const savedUnit = localStorage.getItem('app_units') || 'nautical';
-            document.getElementById('langSelect').value = savedLang;
-            document.getElementById('unitSelect').value = savedUnit;
-            document.getElementById('sosNum').value = localStorage.getItem('sos_num') || "";
+            const lang = localStorage.getItem('app_lang') || 'ar';
+            document.getElementById('langSelect').value = lang;
             updateLanguage();
             updateUnits();
         };
 
         function triggerSOS() {
-            const phone = localStorage.getItem('sos_num') || "911";
+            const phone = localStorage.getItem('sos_num') || "994";
             window.open(`https://api.whatsapp.com/send?phone=${phone}&text=SOS_ZAN_MARINE`);
         }
 
-        map.locate({watch: true, setView: true, maxZoom: 14});
+        map.locate({watch: true, setView: true, maxZoom: 16});
         map.on('locationfound', (e) => {
             if (!window.boatMarker) {
                 window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 10}).addTo(map);
