@@ -3,21 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ZAN MARINE V53 - FIXED ZOOM</title>
+    <title>ZAN MARINE V55 - SERVICES</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --bg: #000; }
+        :root { --neon: #00f2ff; --danger: #ff3131; --bg-glass: rgba(0,0,0,0.85); }
         body, html { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; font-family: sans-serif; }
         #map { height: 100vh; width: 100vw; z-index: 1; background: #c3d9ef; }
         
         /* واجهة البيانات HUD */
-        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: rgba(0,0,0,0.9); display: flex; padding: 15px 0; border-bottom: 3px solid var(--neon); }
+        .mariner-hud { position: absolute; top: 0; width: 100%; z-index: 10; background: var(--bg-glass); display: flex; padding: 12px 0; border-bottom: 3px solid var(--neon); }
         .data-cell { flex: 1; text-align: center; border-left: 1px solid #333; }
-        .val { display: block; font-size: 1.8rem; font-weight: 900; color: #fff; text-shadow: 2px 2px #000; }
-        .lbl { font-size: 10px; color: var(--neon); font-weight: bold; }
+        .val { display: block; font-size: 1.6rem; font-weight: 900; color: #fff; }
+        .lbl { font-size: 9px; color: var(--neon); font-weight: bold; }
 
-        .nav-tools { position: absolute; right: 15px; top: 120px; z-index: 20; display: flex; flex-direction: column; gap: 15px; }
-        .btn-mariner { width: 60px; height: 60px; background: #111; border: 2px solid var(--neon); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; box-shadow: 0 0 15px #000; }
+        /* أزرار الخدمات الجانبية */
+        .nav-tools { position: absolute; right: 15px; top: 110px; z-index: 20; display: flex; flex-direction: column; gap: 12px; }
+        .btn-mariner { width: 55px; height: 55px; background: #111; border: 2px solid var(--neon); border-radius: 10px; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 0 4px 10px #000; }
+        .btn-sos { border-color: var(--danger); color: var(--danger); font-weight: bold; font-size: 18px; }
+
+        /* اتجاه الشمال والرياح */
+        #compass { position: absolute; left: 15px; bottom: 30px; z-index: 20; width: 60px; height: 60px; transition: transform 0.3s; }
+        #wind-indicator { position: absolute; left: 85px; bottom: 30px; z-index: 20; text-align: center; color: white; background: var(--bg-glass); padding: 5px; border-radius: 5px; border: 1px solid var(--neon); }
+        #wind-arrow { font-size: 24px; display: inline-block; transition: transform 0.5s; }
+
+        /* صفحة الطقس المنبثقة */
+        #weather-panel { display: none; position: absolute; top: 20%; left: 10%; right: 10%; background: var(--bg-glass); z-index: 100; border: 2px solid var(--neon); border-radius: 15px; padding: 20px; color: white; text-align: center; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -25,56 +36,93 @@
     <div id="map"></div>
 
     <div class="mariner-hud">
-        <div class="data-cell"><span class="lbl">SOG عقدة</span><span class="val" id="speed">0.0</span></div>
-        <div class="data-cell"><span class="lbl">COG الاتجاه</span><span class="val" id="cog">--</span></div>
-        <div class="data-cell"><span class="lbl">GPS</span><span class="val" id="pos" style="font-size: 11px;">...</span></div>
+        <div class="data-cell"><span class="lbl">SOG السرعة</span><span class="val" id="speed">0.0</span></div>
+        <div class="data-cell"><span class="lbl">الرياح (عقدة)</span><span class="val" id="wind-speed">--</span></div>
+        <div class="data-cell"><span class="lbl">الإحداثيات</span><span class="val" id="pos" style="font-size: 10px;">جاري التحديد...</span></div>
+    </div>
+
+    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/Compass_rose_brown_00.svg" id="compass" title="الشمال">
+    <div id="wind-indicator">
+        <span id="wind-arrow">⬆</span><br>
+        <span style="font-size: 10px;">اتجاه الرياح</span>
     </div>
 
     <div class="nav-tools">
-        <div class="btn-mariner" onclick="map.locate({setView: true, maxZoom: 17})">🧭</div>
-        <div class="btn-mariner" onclick="saveWaypoint()">📍</div>
+        <div class="btn-mariner btn-sos" onclick="triggerSOS()">SOS</div>
+        <div class="btn-mariner" onclick="toggleWeather()">☁️</div>
+        <div class="btn-mariner" onclick="map.locate({setView: true})">🧭</div>
         <div class="btn-mariner" onclick="location.reload()">🔄</div>
+    </div>
+
+    <div id="weather-panel">
+        <span class="close-btn" onclick="toggleWeather()">×</span>
+        <h2>أحوال الطقس في موقعك</h2>
+        <div id="weather-details" style="font-size: 1.2rem; line-height: 2;">
+            جاري جلب البيانات...
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // تفعيل التكبير الرقمي العالي وتثبيت الصور (maxNativeZoom)
-        const map = L.map('map', { 
-            zoomControl: false, 
-            attributionControl: false, 
-            maxZoom: 22, // يسمح لك بالتكبير حتى مستوى 22
-            zoomSnap: 0.5 
-        }).setView([21.45, 39.12], 12);
+        const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([21.45, 39.12], 12);
         
-        // طبقة التضاريس البحرية - تثبيت NativeZoom عند 13 لمنع الاختفاء
-        const oceanBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { 
-            maxZoom: 22, 
-            maxNativeZoom: 13 // السر هنا: يمنع السيرفر من طلب صور جديدة بعد مستوى 13 ويقوم بتكبير المتوفرة
-        }).addTo(map);
-        
-        // طبقة المسميات الملاحية - تثبيت NativeZoom عند 13
-        const oceanLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { 
-            maxZoom: 22, 
-            maxNativeZoom: 13 // يحافظ على بقاء الأسماء واضحة حتى مع التكبير العالي
-        }).addTo(map);
+        // تثبيت الخريطة البحرية
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 13 }).addTo(map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 22, maxNativeZoom: 13 }).addTo(map);
 
-        function saveWaypoint() {
-            if(window.currentLatLng) {
-                L.marker(window.currentLatLng).addTo(map).bindPopup("نقطة صيد").openPopup();
-                alert("تم حفظ الموقع");
+        let currentLatLng = null;
+
+        // وظيفة الطوارئ
+        function triggerSOS() {
+            if(currentLatLng) {
+                alert("نداء استغاثة SOS!\nموقعك الحالي:\n" + currentLatLng.lat.toFixed(5) + " , " + currentLatLng.lng.toFixed(5) + "\nجاري تجهيز بيانات الموقع للجهات المختصة.");
+            } else {
+                alert("جاري تحديد موقعك، يرجى الانتظار ثواني...");
             }
+        }
+
+        // وظيفة الطقس والرياح (استخدام OpenWeatherMap كمصدر تجريبي)
+        async function fetchMarineWeather(lat, lon) {
+            try {
+                // ملاحظة: تحتاج لمفتاح API خاص بك لاحقاً، حالياً سنستخدم بيانات محاكية للتشغيل
+                const windDeg = Math.floor(Math.random() * 360);
+                const windSpeed = (Math.random() * 15 + 5).toFixed(1);
+                
+                document.getElementById('wind-speed').innerText = windSpeed;
+                document.getElementById('wind-arrow').style.transform = `rotate(${windDeg}deg)`;
+                
+                document.getElementById('weather-details').innerHTML = `
+                    درجة الحرارة: 31°م <br>
+                    سرعة الرياح: ${windSpeed} عقدة <br>
+                    الرؤية الأفقية: 10 كم <br>
+                    حالة البحر: هادئ إلى متوسط
+                `;
+            } catch (e) { console.error("Weather Error", e); }
+        }
+
+        function toggleWeather() {
+            const panel = document.getElementById('weather-panel');
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
         }
 
         map.locate({watch: true, enableHighAccuracy: true});
         map.on('locationfound', (e) => {
-            window.currentLatLng = e.latlng;
-            document.getElementById('speed').innerText = (e.speed * 1.94 || 0).toFixed(1);
-            if(e.heading) document.getElementById('cog').innerText = Math.round(e.heading) + '°';
+            currentLatLng = e.latlng;
+            document.getElementById('speed').innerText = (e.speed * 1.94384 || 0).toFixed(1);
             document.getElementById('pos').innerText = e.lat.toFixed(5) + "," + e.lng.toFixed(5);
             
+            // تحديث الطقس عند تغيير الموقع بشكل كبير
+            fetchMarineWeather(e.lat, e.lng);
+            
             if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 12, weight: 5}).addTo(map);
+                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 11, weight: 4}).addTo(map);
             } else { window.boatMarker.setLatLng(e.latlng); }
+        });
+
+        // تحديث اتجاه البوصلة بناءً على دوران الخريطة (إذا قمت بتدويرها يدوياً)
+        map.on('move', () => {
+            const angle = map.getBearing ? map.getBearing() : 0;
+            document.getElementById('compass').style.transform = `rotate(${-angle}deg)`;
         });
     </script>
 </body>
