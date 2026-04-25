@@ -3,199 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ZAN MARINE V68 - FULL NAVIGATION</title>
+    <title>ZAN MARINE V72 - CAPTAIN PROFILE</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --neon: #00f2ff; --danger: #ff3131; --bg: #011627; --card-bg: #022c43; }
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; font-family: sans-serif; overflow: hidden; }
-        
-        /* شريط التنقل العلوي المحسن للجوال */
-        .top-nav { display: flex; background: var(--bg); height: 65px; border-bottom: 2px solid var(--neon); z-index: 2000; position: relative; }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8899a6; font-size: 8px; font-weight: bold; cursor: pointer; text-decoration: none; }
-        .nav-item.active { color: var(--neon); background: rgba(0, 242, 255, 0.1); }
-        .nav-item.sos-btn { background: var(--danger); color: white; border: none; font-size: 12px; }
+        :root { --neon: #00f2ff; --danger: #ff3131; --warning: #ffcc00; --safe: #39ff14; --bg: #011627; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; background: #000; font-family: sans-serif; overflow: hidden; touch-action: manipulation; }
 
-        .page-container { height: calc(100% - 65px); width: 100%; position: relative; }
-        .page { display: none; height: 100%; width: 100%; overflow-y: auto; background: #000; color: white; padding: 15px; box-sizing: border-box; }
+        /* 🎬 شاشة الترحيب المخصصة */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #022c43 0%, #000 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity 1.2s ease-out, visibility 1.2s;
+        }
+        .splash-logo { width: 140px; height: 140px; border: 4px solid var(--neon); border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-size: 50px; 
+            box-shadow: 0 0 30px var(--neon); animation: pulse 2s infinite; color: white; }
+        .splash-text { margin-top: 25px; color: white; font-size: 24px; font-weight: bold; }
+        #welcome-msg { color: var(--neon); margin-top: 10px; font-size: 18px; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* ترويسة التطبيق */
+        .top-nav { display: flex; background: var(--bg); height: 80px; border-bottom: 3px solid var(--neon); z-index: 2000; position: relative; }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 900; }
+        .nav-item.active { color: var(--neon); background: rgba(0, 242, 255, 0.1); }
+        .sos-btn { background: var(--danger); position: relative; width: 90px; }
+        #sos-progress { position: absolute; bottom: 0; left: 0; height: 100%; background: rgba(255,255,255,0.3); width: 0%; }
+
+        .page-container { height: calc(100% - 80px); width: 100%; position: relative; }
+        .page { display: none; height: 100%; width: 100%; overflow-y: auto; background: #000; color: white; padding: 20px; box-sizing: border-box; }
         .page.active { display: block; }
-        
-        #map { height: 100%; width: 100%; background: #011627; }
-        
-        /* تصميم البطاقات */
-        .card { background: var(--card-bg); border: 1px solid var(--neon); border-radius: 10px; padding: 15px; margin-bottom: 12px; }
-        select, input { width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--neon); border-radius: 8px; font-size: 16px; margin: 10px 0; }
-        .btn-action { width: 100%; padding: 15px; background: var(--neon); border: none; border-radius: 8px; font-weight: bold; font-size: 16px; color: #000; margin-top: 10px; }
-        
-        .spot-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #1a3a4a; }
+
+        #map { height: 100%; width: 100%; }
+        #coord-display { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); border: 2px solid var(--neon); padding: 8px; border-radius: 50px; z-index: 1001; font-family: monospace; font-size: 14px; width: 85%; text-align: center; }
+
+        /* تصميم الإعدادات */
+        .card { background: #022c43; border: 2px solid var(--neon); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        input { width: 100%; padding: 15px; background: #000; color: white; border: 2px solid var(--neon); border-radius: 10px; font-size: 18px; margin-top: 10px; box-sizing: border-box; }
+        .btn-save { width: 100%; padding: 18px; background: var(--neon); border: none; border-radius: 10px; font-weight: 900; font-size: 18px; margin-top: 15px; }
+
+        .floating-dash { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 90%; background: rgba(1, 22, 39, 0.9); border: 2px solid var(--neon); border-radius: 15px; display: flex; z-index: 1001; padding: 10px 0; }
+        .dash-item { flex: 1; text-align: center; border-right: 1px solid rgba(0, 242, 255, 0.2); }
+        .dash-val { display: block; font-size: 20px; font-weight: 900; }
+        .dash-label { font-size: 10px; color: var(--neon); }
     </style>
 </head>
 <body>
 
+    <div id="splash-screen">
+        <div class="splash-logo">⚓</div>
+        <div class="splash-text">ZAN MARINE</div>
+        <div id="welcome-msg">أهلاً يا كابتن..</div>
+    </div>
+
+    <div id="coord-display">GPS: جاري البحث..</div>
+
     <nav class="top-nav">
-        <div class="nav-item sos-btn" onclick="triggerSOS()">🚨 SOS</div>
-        <div class="nav-item active" onclick="showPage('navPage', this)" data-key="nav">🧭 NAV</div>
-        <div class="nav-item" onclick="showPage('spotsPage', this)" data-key="spots">📍 SPOTS</div>
-        <div class="nav-item" onclick="showPage('enginePage', this)" data-key="engine">🔧 ENGINE</div>
-        <div class="nav-item" onclick="showPage('weatherPage', this)" data-key="weather">☁️ WEATHER</div>
-        <div class="nav-item" onclick="showPage('settingsPage', this)" data-key="settings">⚙️ SETTINGS</div>
+        <div class="nav-item sos-btn" id="sos-trigger"><div id="sos-progress"></div><span style="z-index:2">🚨 SOS</span></div>
+        <div class="nav-item active" onclick="navTo('navPage', this)">🧭 ملاحة</div>
+        <div class="nav-item" onclick="navTo('spotsPage', this)">📍 مواقعي</div>
+        <div class="nav-item" onclick="navTo('enginePage', this)">🔧 صيانة</div>
+        <div class="nav-item" onclick="navTo('settingsPage', this)">⚙️ ضبط</div>
     </nav>
 
     <div class="page-container">
-        <div id="navPage" class="page active" style="padding:0;"><div id="map"></div></div>
+        <div id="navPage" class="page active" style="padding:0;">
+            <div id="map"></div>
+            <div class="floating-dash">
+                <div class="dash-item"><span class="dash-val" id="dash-sog">0.0</span><span class="dash-label">SOG (عقدة)</span></div>
+                <div class="dash-item"><span class="dash-val" id="dash-cog">000°</span><span class="dash-label">بوصلة</span></div>
+                <div class="dash-item" style="border:none;"><span class="dash-val" id="dash-depth">--</span><span class="dash-label">عمق (م)</span></div>
+            </div>
+        </div>
 
         <div id="settingsPage" class="page">
-            <h2 data-key="settings_title">الإعدادات</h2>
+            <h3>إعدادات القائد</h3>
             <div class="card">
-                <label data-key="lang_label">اللغة / Language</label>
-                <select id="langSelect" onchange="updateLanguage()">
-                    <option value="ar">العربية</option>
-                    <option value="en">English</option>
-                </select>
-                <label data-key="unit_label">نظام القياس / Units</label>
-                <select id="unitSelect" onchange="updateUnits()">
-                    <option value="nautical">بحري (عقدة/قدم)</option>
-                    <option value="metric">متري (كم/متر)</option>
-                </select>
+                <label>اسم الكابتن:</label>
+                <input type="text" id="capNameInput" placeholder="أدخل اسمك هنا..">
+                <p style="font-size: 12px; color: var(--neon); margin-top: 10px;">* هذا الاسم سيظهر في شاشة الترحيب.</p>
             </div>
             <div class="card">
-                <label data-key="sos_num_label">رقم الطوارئ المسجل</label>
-                <input type="tel" id="sosNum" placeholder="9665xxxxxxxx">
-                <button class="btn-action" onclick="saveSettings()" data-key="save_btn">حفظ الإعدادات</button>
+                <label>رقم الطوارئ:</label>
+                <input type="tel" id="sosNumInput" placeholder="9665xxxxxxxx">
             </div>
+            <button class="btn-save" onclick="saveCaptainData()">حفظ التعديلات ✅</button>
         </div>
 
-        <div id="spotsPage" class="page">
-            <h3 data-key="spots_title">مواقعي المحفوظة</h3>
-            <button class="btn-action" onclick="saveCurrentLocation()">+ حفظ موقعي الحالي</button>
-            <div id="spots-list" style="margin-top:20px;"></div>
-        </div>
-
-        <div id="enginePage" class="page">
-            <h3 data-key="engine_title">متابعة الصيانة</h3>
-            <div class="card">
-                <p style="font-size:12px; color:var(--neon);" data-key="engine_hours">ساعات تشغيل المحرك</p>
-                <p style="font-size:32px; text-align:center; margin:15px 0;">145.5 hr</p>
-            </div>
-            <div class="card">
-                <p data-key="next_oil">موعد الزيت القادم: <span style="color:var(--danger)">بعد 15 ساعة</span></p>
-            </div>
-        </div>
-
-        <div id="weatherPage" class="page">
-            <h3 data-key="weather_title">حالة البحر والطقس</h3>
-            <div class="card">
-                <p id="wind-txt">Wind: 14 Knot NW</p>
-                <p>Waves: 0.8m - 1.2m</p>
-            </div>
-        </div>
+        <div id="enginePage" class="page"><h3>المحرك</h3></div>
+        <div id="spotsPage" class="page"><h3>المواقع</h3></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // نظام الترجمة
-        const i18n = {
-            ar: { nav: "🧭 ملاحة", spots: "📍 مواقعي", engine: "🔧 صيانة", weather: "☁️ طقس", settings: "⚙️ إعدادات", settings_title: "إعدادات النظام", lang_label: "اللغة المختارة", unit_label: "وحدات القياس", sos_num_label: "رقم الطوارئ (WhatsApp)", spots_title: "نقاط الصيد والمراسي", engine_hours: "إجمالي ساعات التشغيل", next_oil: "تغيير الزيت القادم", save_btn: "حفظ" },
-            en: { nav: "🧭 NAV", spots: "📍 SPOTS", engine: "🔧 ENGINE", weather: "☁️ WEATHER", settings: "⚙️ SETTINGS", settings_title: "System Settings", lang_label: "App Language", unit_label: "Unit System", sos_num_label: "Emergency No.", spots_title: "Saved Marine Spots", engine_hours: "Engine Total Hours", next_oil: "Next Oil Change", save_btn: "Save" }
-        };
+        // تحميل البيانات عند البداية
+        const savedName = localStorage.getItem('cap_name') || "سديقي";
+        document.getElementById('welcome-msg').innerText = `أهلاً يا كابتن ${savedName}..`;
+        document.getElementById('capNameInput').value = savedName === "سديقي" ? "" : savedName;
+        document.getElementById('sosNumInput').value = localStorage.getItem('sos_num') || "";
 
-        // إعداد الخريطة مع الطبقات البحرية والموانئ
-        const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 18 }).setView([21.45, 39.12], 12);
-        
-        // 1. طبقة القاعدة الملاحية (الأعماق والتضاريس)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 13 }).addTo(map);
-        
-        // 2. طبقة المراجع (الأسماء والأعماق الدقيقة)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, opacity: 1.0 }).addTo(map);
-        
-        // 3. طبقة الموانئ والمراسي والمرافق الساحلية (جديدة)
-        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, opacity: 0.7 }).addTo(map);
-
-        let currentLatLng = null;
-        let savedSpots = JSON.parse(localStorage.getItem('zan_spots')) || [];
-
-        function showPage(pageId, element) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            element.classList.add('active');
-            if(pageId === 'navPage') setTimeout(() => map.invalidateSize(), 300);
-            if(pageId === 'spotsPage') renderSpots();
-        }
-
-        function updateLanguage() {
-            const lang = document.getElementById('langSelect').value;
-            localStorage.setItem('app_lang', lang);
-            document.dir = lang === 'ar' ? 'rtl' : 'ltr';
-            document.querySelectorAll('[data-key]').forEach(el => {
-                const key = el.getAttribute('data-key');
-                el.innerText = i18n[lang][key];
-            });
-        }
-
-        function updateUnits() {
-            const unit = document.getElementById('unitSelect').value;
-            localStorage.setItem('app_units', unit);
-            document.getElementById('wind-txt').innerText = unit === 'nautical' ? "Wind: 14 Knot NW" : "Wind: 26 Km/h NW";
-        }
-
-        function saveSettings() {
-            localStorage.setItem('sos_num', document.getElementById('sosNum').value);
-            alert(document.dir === 'rtl' ? "تم الحفظ" : "Saved");
-        }
-
-        function saveCurrentLocation() {
-            if(!currentLatLng) return alert("Waiting for GPS...");
-            const name = prompt(document.dir === 'rtl' ? "اسم الموقع:" : "Spot Name:");
-            if(name) {
-                savedSpots.push({ id: Date.now(), name, lat: currentLatLng.lat, lng: currentLatLng.lng });
-                localStorage.setItem('zan_spots', JSON.stringify(savedSpots));
-                renderSpots();
-            }
-        }
-
-        function renderSpots() {
-            const list = document.getElementById('spots-list');
-            list.innerHTML = savedSpots.map(s => `
-                <div class="spot-item">
-                    <div>
-                        <b style="color:var(--neon)">${s.name}</b><br>
-                        <small>${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}</small>
-                    </div>
-                    <button onclick="deleteSpot(${s.id})" style="background:none; border:none; color:var(--danger)">🗑️</button>
-                </div>
-            `).join('');
-        }
-
-        function deleteSpot(id) {
-            savedSpots = savedSpots.filter(s => s.id !== id);
-            localStorage.setItem('zan_spots', JSON.stringify(savedSpots));
-            renderSpots();
-        }
-
-        function triggerSOS() {
-            const phone = localStorage.getItem('sos_num') || "994";
-            const msg = currentLatLng ? `SOS! My Loc: https://www.google.com/maps?q=${currentLatLng.lat},${currentLatLng.lng}` : "SOS Emergency!";
-            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`);
-        }
-
-        window.onload = () => {
-            const lang = localStorage.getItem('app_lang') || 'ar';
-            const unit = localStorage.getItem('app_units') || 'nautical';
-            document.getElementById('langSelect').value = lang;
-            document.getElementById('unitSelect').value = unit;
-            document.getElementById('sosNum').value = localStorage.getItem('sos_num') || "";
-            updateLanguage();
-            updateUnits();
-        };
-
-        // تتبع الموقع المباشر
-        map.locate({watch: true, setView: true, maxZoom: 16});
-        map.on('locationfound', (e) => {
-            currentLatLng = e.latlng;
-            if (!window.boatMarker) {
-                window.boatMarker = L.circleMarker(e.latlng, {color: '#fff', fillColor: '#00f2ff', fillOpacity: 1, radius: 8, weight: 3}).addTo(map);
-            } else { window.boatMarker.setLatLng(e.latlng); }
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const splash = document.getElementById('splash-screen');
+                splash.style.opacity = '0';
+                setTimeout(() => { splash.style.visibility = 'hidden'; }, 1200);
+            }, 3000);
         });
+
+        function saveCaptainData() {
+            const name = document.getElementById('capNameInput').value || "سديقي";
+            const sos = document.getElementById('sosNumInput').value;
+            localStorage.setItem('cap_name', name);
+            localStorage.setItem('sos_num', sos);
+            haptic();
+            alert("تم تحديث بيانات الكابتن بنجاح!");
+            location.reload(); // لإعادة تحديث شاشة الترحيب
+        }
+
+        function haptic() { if (window.navigator.vibrate) window.navigator.vibrate(50); }
+
+        function navTo(pageId, el) {
+            haptic();
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            el.classList.add('active');
+            if(pageId === 'navPage') setTimeout(() => map.invalidateSize(), 200);
+        }
+
+        // SOS بالضغط المطول
+        let sosTimer, sosProgress = 0;
+        const sosBtn = document.getElementById('sos-trigger');
+        sosBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            sosTimer = setInterval(() => {
+                sosProgress += 4;
+                document.getElementById('sos-progress').style.width = sosProgress + "%";
+                if (sosProgress >= 100) { clearInterval(sosTimer); alert("🚨 استغاثة من الكابتن " + localStorage.getItem('cap_name')); }
+            }, 100);
+        });
+        sosBtn.addEventListener('touchend', () => { clearInterval(sosTimer); sosProgress = 0; document.getElementById('sos-progress').style.width = "0%"; });
+
+        const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([21.45, 39.12], 12);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}').addTo(map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}').addTo(map);
     </script>
 </body>
 </html>
