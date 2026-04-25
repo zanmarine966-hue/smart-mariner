@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ZAN MARINE V66 - DETAIL FIXED</title>
+    <title>ZAN MARINE V67 - FULL LABELS</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --neon: #00f2ff; --danger: #ff3131; --bg: #011627; }
@@ -20,7 +20,7 @@
         
         #map { height: 100%; width: 100%; background: #011627; }
         .card { background: #022c43; border: 1px solid var(--neon); border-radius: 10px; padding: 15px; margin-bottom: 12px; }
-        select { width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--neon); border-radius: 8px; }
+        select { width: 100%; padding: 12px; background: #000; color: white; border: 1px solid var(--neon); border-radius: 8px; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -40,13 +40,13 @@
         <div id="settingsPage" class="page">
             <h2 data-key="settings_title">الإعدادات</h2>
             <div class="card">
-                <label data-key="lang_label">اللغة</label>
+                <label data-key="lang_label">اللغة / Language</label>
                 <select id="langSelect" onchange="updateLanguage()">
                     <option value="ar">العربية</option>
                     <option value="en">English</option>
                 </select>
                 <br><br>
-                <label data-key="unit_label">نظام القياس</label>
+                <label data-key="unit_label">نظام القياس / Units</label>
                 <select id="unitSelect" onchange="updateUnits()">
                     <option value="nautical">بحري (عقدة/قدم)</option>
                     <option value="metric">متري (كم/متر)</option>
@@ -66,17 +66,20 @@
             en: { nav: "🧭 NAV", spots: "📍 SPOTS", engine: "🔧 ENGINE", weather: "☁️ WEATHER", settings: "⚙️ SETTINGS", settings_title: "Settings", lang_label: "Language", unit_label: "Units", spots_title: "Saved Spots" }
         };
 
-        // إصلاح الطبقات لظهور الأسماء والأعماق
-        const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 22 }).setView([21.45, 39.12], 12);
+        // استخدام رابط الخريطة المدمج لضمان ظهور الأسماء والأعماق
+        const map = L.map('map', { zoomControl: false, attributionControl: false, maxZoom: 18 }).setView([21.45, 39.12], 12);
         
-        const baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 13, // أقصى زوم للطبقة الأساسية
+        // طبقة Esri المحيطية المدمجة (تحتوي على التضاريس والأسماء معاً)
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 13,
             maxNativeZoom: 13
         }).addTo(map);
 
-        const refLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
-            maxZoom: 22, // طبقة الأسماء والأعماق تدعم زوم أعلى
-            maxNativeZoom: 13
+        // طبقة المراجع العلوية (الأسماء والأعماق) - إجبارية للظهور فوق القاعدة
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18,
+            maxNativeZoom: 13,
+            opacity: 1.0 // التأكد من وضوح النصوص بنسبة 100%
         }).addTo(map);
 
         function showPage(pageId, element) {
